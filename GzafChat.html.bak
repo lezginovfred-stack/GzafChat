@@ -1,0 +1,3587 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GzafChat — Кастомизация, Анимации, Звонки и Авторизация</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Обеспечиваем фиксацию высоты по динамическому вьюпорту, исключая обрезку панелей */
+        html, body {
+            height: 100vh;
+            height: 100dvh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #messagesContainer {
+            transition: background-color 0.3s ease;
+        }
+        
+        /* Кастомный скроллбар */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* АНИМАЦИЯ НАЖАТИЯ И НАВЕДЕНИЯ ДЛЯ КНОПОК */
+        .btn-anim {
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: scale(1);
+        }
+        .btn-anim:hover {
+            transform: scale(1.05);
+            filter: brightness(1.15);
+        }
+        .btn-anim:active {
+            transform: scale(0.95);
+            filter: brightness(0.95);
+        }
+
+        /* Анимация для новых сообщений */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .message-new-anim {
+            animation: fadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* ГЛАДКАЯ КРУГОВАЯ ПУЛЬСАЦИЯ */
+        @keyframes statusRipple {
+            0% {
+                transform: scale(0.8);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(2.4);
+                opacity: 0;
+            }
+        }
+
+        /* ЗЕЛЕНЫЙ ИНДИКАТОР ОНЛАЙН С АНИМАЦИЕЙ */
+        .status-online-dot {
+            background-color: #10b981; /* emerald-500 */
+            position: relative;
+        }
+        .status-online-dot::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: inherit;
+            border-radius: inherit;
+            animation: statusRipple 1.6s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+        }
+
+        /* КРАСНЫЙ ИНДИКАТОР ОФЛАЙН С АНИМАЦИЕЙ */
+        .status-offline-dot {
+            background-color: #f43f5e; /* rose-500 */
+            position: relative;
+        }
+        .status-offline-dot::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: inherit;
+            border-radius: inherit;
+            animation: statusRipple 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+        }
+
+        /* КОМПАКТНЫЙ РЕЖИМ ПЕРЕПИСКИ */
+        body.compact-mode .py-2.px-3\.5 {
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+            padding-left: 0.65rem !important;
+            padding-right: 0.65rem !important;
+        }
+        body.compact-mode .message-new-anim {
+            margin-top: 0.35rem !important;
+            margin-bottom: 0.35rem !important;
+        }
+        body.compact-mode #messagesContainer > div {
+            margin-top: 0.35rem !important;
+            margin-bottom: 0.35rem !important;
+        }
+
+        /* СТИЛИ ДЛЯ СВЕТЛОЙ ТЕМЫ ОФОРМЛЕНИЯ */
+        body.light-theme {
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        body.light-theme #appMainContainer {
+            background-color: rgba(255, 255, 255, 0.85);
+            border-color: #cbd5e1;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+        }
+        body.light-theme aside {
+            border-color: #cbd5e1;
+            background-color: rgba(248, 250, 252, 0.5);
+        }
+        body.light-theme #activeChat {
+            background-color: #f8fafc;
+        }
+        body.light-theme #noChatSelected {
+            background-color: #f1f5f9;
+        }
+        body.light-theme .bg-slate-900\/50 {
+            background-color: rgba(241, 245, 249, 0.85);
+        }
+        body.light-theme .border-slate-800 {
+            border-color: #cbd5e1;
+        }
+        body.light-theme .bg-slate-950 {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+        body.light-theme .text-slate-400 {
+            color: #475569;
+        }
+        body.light-theme .text-slate-200 {
+            color: #0f172a;
+        }
+        body.light-theme .text-slate-500 {
+            color: #64748b;
+        }
+        body.light-theme input {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        body.light-theme input::placeholder {
+            color: #94a3b8 !important;
+        }
+        body.light-theme .bg-slate-900 {
+            background-color: #ffffff;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        body.light-theme #groupMembersList {
+            background-color: #f8fafc;
+            border-color: #cbd5e1;
+        }
+        body.light-theme #messagesContainer {
+            background-color: #f1f5f9 !important;
+        }
+        body.light-theme #settingsModal > div,
+        body.light-theme #profileInfoModal > div,
+        body.light-theme #groupModal > div,
+        body.light-theme #customAlert > div,
+        body.light-theme #phoneContactsModal > div {
+            background-color: #ffffff;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+        body.light-theme .text-slate-300 {
+            color: #1e293b;
+        }
+        body.light-theme .bg-slate-950\/40 {
+            background-color: #f8fafc;
+        }
+        body.light-theme select {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+
+        body.light-theme #tabContent-statuses,
+        body.light-theme #tabContent-calls {
+            background-color: #f1f5f9;
+        }
+        body.light-theme #tabContent-statuses .bg-slate-950\/40,
+        body.light-theme #tabContent-calls .bg-slate-900\/40 {
+            background-color: #ffffff;
+            border-color: #cbd5e1;
+        }
+
+        /* ПЛАСТИКОВЫЙ СТИЛЬ FAB КНОПКИ (СИНИЙ С ГЛЯНЦЕМ) */
+        .plastic-btn {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.45) 0%, rgba(79, 70, 229, 0.2) 100%);
+            box-shadow: 
+                0 10px 25px 0 rgba(0, 0, 0, 0.4),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3),
+                inset 0 -3px 8px rgba(0, 0, 0, 0.35),
+                0 0 0 1px rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-radius: 50%;
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .plastic-btn:hover {
+            transform: scale(1.08) translateY(-2px);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.65) 0%, rgba(79, 70, 229, 0.3) 100%);
+            box-shadow: 
+                0 14px 35px 0 rgba(99, 102, 241, 0.45),
+                inset 0 2px 6px rgba(255, 255, 255, 0.45),
+                inset 0 -4px 10px rgba(0, 0, 0, 0.45);
+        }
+        .plastic-btn:active {
+            transform: scale(0.95);
+            box-shadow: 
+                0 4px 10px 0 rgba(0, 0, 0, 0.5),
+                inset 0 1px 3px rgba(255, 255, 255, 0.2),
+                inset 0 -2px 5px rgba(0, 0, 0, 0.5);
+        }
+
+        body.light-theme .plastic-btn {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.5) 0%, rgba(79, 70, 229, 0.25) 100%);
+            box-shadow: 
+                0 8px 24px 0 rgba(99, 102, 241, 0.25),
+                inset 0 2px 4px rgba(255, 255, 255, 0.65),
+                inset 0 -3px 8px rgba(0, 0, 0, 0.1),
+                0 0 0 1px rgba(99, 102, 241, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-full w-screen flex justify-center items-center overflow-hidden animate-none">
+
+    <!-- КРАСИВОЕ КАСТОМНОЕ ОКНО УВЕДОМЛЕНИЯ -->
+    <div id="customAlert" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl animate-in zoom-in-95 duration-200">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-500 mx-auto mb-4 animate-bounce">
+                <i data-lucide="check-circle" class="w-10 h-10"></i>
+            </div>
+            <h3 id="customAlertTitle" class="text-lg font-bold text-slate-100" data-i18n="successAlertTitle">Успешно!</h3>
+            <p id="customAlertMsg" class="text-sm text-slate-400 mt-2 leading-relaxed">Операция успешно выполнена.</p>
+            <button onclick="closeCustomAlert()" class="w-full mt-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition btn-anim text-sm" data-i18n="alertOkBtn">
+                Отлично
+            </button>
+        </div>
+    </div>
+
+    <!-- СКРЫТЫЙ ИНПУТ ДЛЯ ЗАГРУЗКИ АВАТАРА КЛИКОМ ПО ПРОФИЛЮ -->
+    <input type="file" id="directAvatarInput" accept="image/*" class="hidden" onchange="handleDirectAvatarUpload(event)">
+
+    <!-- СИСТЕМА ВХОДА, РЕГИСТРАЦИИ И ВОССТАНОВЛЕНИЯ -->
+    <div id="authContainer" class="fixed inset-0 bg-slate-950 z-[200] flex flex-col items-center justify-center p-4">
+        <!-- Кнопки выбора языка на экране авторизации -->
+        <div class="flex justify-end space-x-3 text-xs text-slate-400 mb-4 w-full max-w-md px-2">
+            <button type="button" onclick="setLanguage('ru')" class="hover:text-indigo-400 transition font-semibold">RU</button>
+            <button type="button" onclick="setLanguage('az')" class="hover:text-indigo-400 transition font-semibold">AZ</button>
+            <button type="button" onclick="setLanguage('en')" class="hover:text-indigo-400 transition font-semibold">EN</button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-6">
+            <div class="text-center">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mx-auto mb-3">
+                    <i data-lucide="message-square" class="w-8 h-8"></i>
+                </div>
+                <h2 id="authTitle" class="text-2xl font-bold tracking-tight" data-i18n="authTitle">Вход в GzafChat</h2>
+                <p id="authSubtitle" class="text-sm text-slate-400 mt-1" data-i18n="authSubtitle">Введите ваши данные для доступа к переписке</p>
+            </div>
+
+            <!-- ФОРМА ВХОДА -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase" data-i18n="usernameLabel">Имя пользователя (Никнейм)</label>
+                    <input type="text" id="loginUsername" required placeholder="например, admin" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs text-slate-400 font-semibold uppercase" data-i18n="passwordLabel">Пароль</label>
+                        <button type="button" onclick="switchAuthMode('forgot')" class="text-xs text-indigo-400 hover:underline font-semibold" data-i18n="forgotPasswordLink">Забыли пароль?</button>
+                    </div>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition shadow-lg btn-anim text-sm" data-i18n="loginBtn">
+                    Войти в аккаунт
+                </button>
+                <p class="text-center text-xs text-slate-400 mt-2">
+                    <span data-i18n="noAccount">Нет аккаунта?</span> <button type="button" onclick="switchAuthMode('register')" class="text-indigo-400 hover:underline font-semibold" data-i18n="registerLink">Зарегистрироваться</button>
+                </p>
+            </form>
+
+            <!-- ФОРМА РЕГИСТРАЦИИ (Без загрузки фото) -->
+            <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-4 hidden max-h-[70vh] overflow-y-auto pr-1">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase" data-i18n="regUsernameLabel">Имя пользователя (Уникальный ник)</label>
+                    <input type="text" id="regUsername" required placeholder="User123" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase" data-i18n="regDisplayNameLabel">Отображаемое имя</label>
+                    <input type="text" id="regDisplayName" required placeholder="Константин" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase" data-i18n="regPasswordLabel">Пароль</label>
+                    <input type="password" id="regPassword" required placeholder="Минимум 4 символа" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase text-[10px]" data-i18n="regPhoneLabel">Номер телефона</label>
+                        <input type="text" id="regPhone" placeholder="+7 (999) 000-00-00" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase text-[10px]" data-i18n="regBioLabel">О себе</label>
+                        <input type="text" id="regBio" placeholder="Статус профиля" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+                <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition shadow-lg btn-anim text-sm" data-i18n="createAccountBtn">
+                    Создать аккаунт
+                </button>
+                <p class="text-center text-xs text-slate-400 mt-2">
+                    <span data-i18n="alreadyHaveAccount">Уже есть аккаунт?</span> <button type="button" onclick="switchAuthMode('login')" class="text-indigo-400 hover:underline font-semibold" data-i18n="loginLink">Войти</button>
+                </p>
+            </form>
+
+            <!-- ФОРМА ВОССТАНОВЛЕНИЯ ПАРОЛЯ -->
+            <form id="forgotForm" onsubmit="handleForgotPassword(event)" class="space-y-4 hidden max-h-[70vh] overflow-y-auto pr-1">
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase" data-i18n="forgotUsernameLabel">Имя пользователя (Никнейм)</label>
+                    <input type="text" id="forgotUsername" required placeholder="например, admin" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase" data-i18n="forgotPhoneLabel">Номер телефона</label>
+                    <input type="text" id="forgotPhone" required placeholder="+7 (999) 000-00-00" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1 font-semibold uppercase" data-i18n="forgotNewPasswordLabel">Новый пароль</label>
+                    <input type="password" id="forgotNewPassword" required placeholder="Минимум 4 символа" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition shadow-lg btn-anim text-sm" data-i18n="forgotBtn">
+                    Сбросить и установить новый пароль
+                </button>
+                <p class="text-center text-xs text-slate-400 mt-2">
+                    <button type="button" onclick="switchAuthMode('login')" class="text-indigo-400 hover:underline font-semibold" data-i18n="backToLoginLink">Вернуться ко входу</button>
+                </p>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ГЛАВНЫЙ КОНТЕЙНЕР ПРИЛОЖЕНИЯ -->
+    <div id="appMainContainer" class="w-full h-full md:h-[92vh] md:w-[95%] max-w-7xl md:rounded-2xl md:shadow-2xl md:border md:border-slate-800 flex overflow-hidden bg-slate-900/80 backdrop-blur-xl hidden">
+        
+        <!-- ЛЕВАЯ ПАНЕЛЬ: СПИСОК ЧАТОВ (С ТАБАМИ WHATSAPP) -->
+        <aside class="w-full md:w-[380px] h-full flex flex-col border-r border-slate-800 flex-shrink-0 relative" id="sidebar">
+            <!-- Шапка профиля -->
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <img id="myProfileAvatar" src="" onclick="openProfileInfo(event, 'me')" class="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500 flex-shrink-0 cursor-pointer hover:opacity-80 transition" alt="My Profile">
+                    <div class="overflow-hidden">
+                        <h2 id="myProfileName" class="font-semibold text-sm truncate">Пользователь</h2>
+                        <span id="myProfileStatusLabel" class="text-[10px] text-emerald-400 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full status-ripple"></span> <span data-i18n="onlineStatus">в сети</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="flex space-x-1 text-slate-400">
+                    <!-- КНОПКА СОЗДАНИЯ ГРУППЫ -->
+                    <button onclick="toggleGroupModal()" class="p-2 hover:bg-slate-800 rounded-full transition text-indigo-400 hover:text-indigo-300 btn-anim" title="Создать группу"><i data-lucide="users" class="w-5 h-5"></i></button>
+                    <!-- Кнопка настроек -->
+                    <button class="p-2 hover:bg-slate-800 rounded-full transition text-indigo-400 hover:text-indigo-300 btn-anim" onclick="toggleSettingsModal()"><i data-lucide="settings" class="w-5 h-5"></i></button>
+                </div>
+            </div>
+
+            <!-- ВЕРХНЯЯ ПАНЕЛЬ ТАБОВ (ИКОНКИ В СТИЛЕ WHATSAPP) -->
+            <div class="flex border-b border-slate-800 bg-slate-900/20 text-slate-400 flex-shrink-0">
+                <button onclick="switchTab('chats')" id="tabBtn-chats" class="flex-1 py-3 flex justify-center items-center text-indigo-500 border-b-2 border-indigo-500 transition btn-anim" title="Чаты" data-i18n="tabChatsTooltip">
+                    <i data-lucide="message-square" class="w-5 h-5"></i>
+                </button>
+                <button onclick="switchTab('statuses')" id="tabBtn-statuses" class="flex-1 py-3 flex justify-center items-center border-b-2 border-transparent hover:text-slate-200 transition btn-anim" title="Статусы" data-i18n="tabStatusesTooltip">
+                    <i data-lucide="aperture" class="w-5 h-5"></i>
+                </button>
+                <button onclick="switchTab('calls')" id="tabBtn-calls" class="flex-1 py-3 flex justify-center items-center border-b-2 border-transparent hover:text-slate-200 transition btn-anim" title="Звонки" data-i18n="tabCallsTooltip">
+                    <i data-lucide="phone" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- СОДЕРЖИМОЕ ТАБОВ -->
+            
+            <!-- ТАБ: ЧАТЫ -->
+            <div id="tabContent-chats" class="flex-1 flex flex-col overflow-hidden">
+                <!-- Поиск -->
+                <div class="p-3 flex-shrink-0">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                        <input type="text" id="searchInput" oninput="filterChats()" placeholder="Поиск контактов..." class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 pl-10 pr-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+                    </div>
+                </div>
+
+                <!-- Список контактов -->
+                <div class="flex-1 overflow-y-auto divide-y divide-slate-800/50" id="chatsContainer">
+                    <!-- Сюда динамически рендерятся чаты -->
+                </div>
+            </div>
+
+            <!-- ТАБ: СТАТУСЫ -->
+            <div id="tabContent-statuses" class="flex-1 flex flex-col overflow-y-auto hidden p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider" data-i18n="statusTabTitle">Мой статус</h3>
+                    <button onclick="document.getElementById('statusFileInput').click()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 btn-anim">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i> <span data-i18n="addStatusBtn">Добавить</span>
+                    </button>
+                    <input type="file" id="statusFileInput" accept="image/*" class="hidden" onchange="handleAddStatus(event)">
+                </div>
+                
+                <div class="flex items-center space-x-3 p-3 bg-slate-950/40 border border-slate-800/50 rounded-2xl cursor-pointer hover:bg-slate-900/40 transition justify-between" onclick="viewMyStatus()">
+                    <div class="flex items-center space-x-3 overflow-hidden flex-1">
+                        <div class="relative flex-shrink-0">
+                            <img id="myStatusAvatar" src="" class="w-11 h-11 rounded-full object-cover border-2 border-indigo-500 p-0.5 bg-slate-900">
+                            <div class="absolute bottom-0 right-0 bg-indigo-600 rounded-full w-4 h-4 flex items-center justify-center text-white text-[10px] border border-slate-900 font-bold">+</div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-bold text-xs text-slate-200" data-i18n="myStatusLabel">Мой статус</h4>
+                            <p id="myStatusTime" class="text-[10px] text-slate-400 truncate" data-i18n="noStatusYet">Нажмите, чтобы добавить или просмотреть</p>
+                            <p id="myStatusPreviewText" class="text-[11px] text-slate-400 italic truncate mt-0.5 hidden"></p>
+                        </div>
+                    </div>
+                    <div id="myStatusPreviewImgContainer" class="w-10 h-10 rounded-lg overflow-hidden border border-slate-800/80 flex-shrink-0 hidden">
+                        <img id="myStatusPreviewImg" src="" class="w-full h-full object-cover">
+                    </div>
+                </div>
+
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider pt-2" data-i18n="recentStatuses">Недавние обновления</h3>
+                <div class="space-y-3" id="recentStatusesContainer">
+                    <!-- Заполняется динамически -->
+                </div>
+            </div>
+
+            <!-- ТАБ: ЗВОНКИ -->
+            <div id="tabContent-calls" class="flex-1 flex flex-col overflow-y-auto hidden p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider" data-i18n="callTabTitle">Журнал звонков</h3>
+                    <button onclick="clearCallHistory()" class="text-xs text-red-400 hover:text-red-300 font-semibold flex items-center gap-1 btn-anim">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> <span data-i18n="clearCallsBtn">Очистить</span>
+                    </button>
+                </div>
+                <div class="space-y-3 animate-fade-in" id="callHistoryContainer">
+                    <!-- Заполняется динамически -->
+                </div>
+            </div>
+
+            <!-- КНОПКА ТЕЛЕФОННЫХ КОНТАКТОВ (ПЛАСТИКОВЫЙ СТИЛЬ) -->
+            <button onclick="togglePhoneContactsModal()" class="absolute bottom-4 right-4 w-14 h-14 plastic-btn flex items-center justify-center text-white z-20 btn-anim" id="phoneContactsBtn" data-i18n="phoneContactsTooltip" title="Посмотреть контакты телефона">
+                <i data-lucide="contact" class="w-6 h-6"></i>
+            </button>
+        </aside>
+
+        <!-- ПРАВАЯ ПАНЕЛЬ: ОКНО ЧАТА -->
+        <main class="hidden md:flex flex-1 h-full flex-col bg-slate-950/40 relative" id="chatArea">
+            <!-- Состояние без выбранного чата -->
+            <div id="noChatSelected" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-950">
+                <div class="w-20 h-20 rounded-3xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-4 animate-bounce">
+                    <i data-lucide="message-square" class="w-10 h-10"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2" data-i18n="welcomeTitle">Добро пожаловать в GzafChat</h3>
+                <p class="text-slate-400 text-sm max-w-sm" data-i18n="welcomeDesc">Выберите чат. Кликните по аватарке собеседника или своей, чтобы открыть информацию о профиле.</p>
+            </div>
+
+            <!-- Активное окно чата -->
+            <div id="activeChat" class="hidden flex-1 flex flex-col h-full overflow-hidden relative">
+                <!-- Шапка чата -->
+                <div class="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center flex-shrink-0">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <button onclick="backToSidebar()" class="md:hidden p-2 text-slate-400 hover:text-white mr-1 flex-shrink-0 btn-anim">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <img id="chatAvatar" src="" onclick="openProfileInfo(event, 'contact')" class="w-10 h-10 rounded-full object-cover flex-shrink-0 cursor-pointer hover:opacity-80 transition" alt="Avatar">
+                        <div class="overflow-hidden">
+                            <h3 id="chatName" class="font-semibold text-sm truncate"></h3>
+                            <span id="chatStatus" class="text-xs text-slate-400 block truncate"></span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2 text-slate-400 flex-shrink-0">
+                        <!-- КНОПКА АУДИОЗВОНКА -->
+                        <button class="p-2 hover:bg-slate-800 rounded-full transition text-emerald-400 hover:text-emerald-300 btn-anim" onclick="startAudioCall()"><i data-lucide="phone" class="w-5 h-5"></i></button>
+                        <!-- КНОПКА ВИДЕОЗВОНКА -->
+                        <button class="p-2 hover:bg-slate-800 rounded-full transition text-indigo-400 hover:text-indigo-300 btn-anim" onclick="startVideoCall()"><i data-lucide="video" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+
+                <!-- Сообщения -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-4" id="messagesContainer">
+                    <!-- Сюда рендерятся сообщения -->
+                </div>
+
+                <!-- Панель ввода и Смайликов (Относительное позиционирование) -->
+                <div class="p-4 bg-slate-900/50 border-t border-slate-800 flex-shrink-0 relative">
+                    
+                    <!-- ДИНАМИЧЕСКАЯ ПАНЕЛЬ СМАЙЛИКОВ -->
+                    <div id="emojiPanel" class="hidden absolute bottom-20 left-4 right-4 sm:left-4 sm:right-auto sm:w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-4 z-30 max-h-80 overflow-y-auto flex flex-col space-y-4 animate-in slide-in-from-bottom-2 duration-150">
+                        <!-- Контент рендерится из JS -->
+                    </div>
+
+                    <!-- Поле отправки -->
+                    <form id="messageForm" onsubmit="handleSend(event)" class="flex items-center space-x-2">
+                        <button type="button" onclick="toggleEmojiPanel()" class="p-2.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-xl transition btn-anim">
+                            <i data-lucide="smile" class="w-5 h-5"></i>
+                        </button>
+                        
+                        <!-- Загрузка изображения -->
+                        <button type="button" onclick="document.getElementById('fileInput').click()" class="p-2.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-xl transition btn-anim">
+                            <i data-lucide="paperclip" class="w-5 h-5"></i>
+                        </button>
+                        <input type="file" id="fileInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+
+                        <input type="text" id="messageInput" autocomplete="off" placeholder="Напишите сообщение..." class="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
+
+                        <!-- Микрофон -->
+                        <button type="button" id="micBtn" onclick="toggleVoiceRecord()" class="p-2.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition flex items-center justify-center btn-anim">
+                            <i data-lucide="mic" id="micIcon" class="w-5 h-5"></i>
+                            <span id="recordTimer" class="hidden text-xs text-red-500 ml-1 font-mono">0:00</span>
+                        </button>
+
+                        <button type="submit" class="p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition shadow-lg flex-shrink-0 btn-anim">
+                            <i data-lucide="send" class="w-5 h-5"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО НАСТРОЕК (РАСШИРЕННЫЙ ДВУХКОЛОНОЧНЫЙ ДИЗАЙН) -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl flex flex-col max-h-[90vh] shadow-2xl overflow-hidden">
+            <!-- Шапка настроек -->
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-base font-bold flex items-center gap-2" data-i18n="settingsTitle">
+                    <i data-lucide="settings" class="w-5 h-5 text-indigo-500"></i> Настройки дизайна и профиля
+                </h3>
+                <button onclick="toggleSettingsModal()" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition btn-anim">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- Содержимое настроек (Двухколоночный Grid) -->
+            <div class="p-5 overflow-y-auto space-y-6 flex-1 text-sm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- ЛЕВАЯ СЕКЦИЯ: ПРОФИЛЬ И КАСТОМИЗАЦИЯ -->
+                    <div class="space-y-6">
+                        <!-- Секция: Профиль -->
+                        <div class="space-y-4">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider" data-i18n="profileSection">Мой Профиль</h4>
+                            <div class="flex items-center space-x-4">
+                                <div class="relative group cursor-pointer flex-shrink-0 btn-anim" onclick="document.getElementById('profilePicInput').click()">
+                                    <img id="settingsProfilePic" src="" class="w-16 h-16 rounded-full object-cover ring-2 ring-indigo-500 hover:opacity-85 transition" alt="My Photo">
+                                    <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                                        <i data-lucide="camera" class="w-5 h-5 text-white"></i>
+                                    </div>
+                                </div>
+                                <input type="file" id="profilePicInput" accept="image/*" class="hidden" onchange="handleProfilePicUpload(event)">
+                                
+                                <div class="flex-1 space-y-2">
+                                    <div>
+                                        <label class="block text-[11px] text-slate-400 mb-1" data-i18n="displayNameLabel">Отображаемое имя</label>
+                                        <input type="text" id="settingsProfileName" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-1.5 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition text-xs">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1" data-i18n="bioLabel">О себе (Статус)</label>
+                                    <input type="text" id="settingsProfileBio" placeholder="Информация о вас" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] text-slate-400 mb-1" data-i18n="phoneLabel">Номер телефона</label>
+                                    <input type="text" id="settingsProfilePhone" placeholder="+7 (000) 000-00-00" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition text-xs">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Язык и Тема оформления -->
+                        <div class="space-y-4 border-t border-slate-800/80 pt-4">
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" data-i18n="langLabel">Язык интерфейса</h4>
+                                <select id="settingsLang" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition text-xs">
+                                    <option value="ru">Русский</option>
+                                    <option value="az">Azərbaycanca</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2" data-i18n="themeLabel">Тема оформления</h4>
+                                <select id="settingsTheme" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition text-xs">
+                                    <option value="dark" data-i18n="themeDark">Тёмная</option>
+                                    <option value="light" data-i18n="themeLight">Светлая</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Секция: Дизайн и темы -->
+                        <div class="space-y-4 border-t border-slate-800/80 pt-4">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider" data-i18n="designSection">Кастомизация дизайна чата</h4>
+                            
+                            <div class="space-y-3">
+                                <!-- Фон чата -->
+                                <div class="flex items-center justify-between bg-slate-950/40 p-2.5 rounded-xl border border-slate-800">
+                                    <span class="text-xs text-slate-300" data-i18n="chatBgLabel">Фон переписки (Задний план)</span>
+                                    <input type="color" id="settingsBgColor" class="w-10 h-7 rounded border-0 bg-transparent cursor-pointer">
+                                </div>
+
+                                <!-- Мои сообщения -->
+                                <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800 space-y-2">
+                                    <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider block" data-i18n="myBubbleLabel">Мои сообщения (Справа)</span>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="flex items-center justify-between bg-slate-900 p-2 rounded-lg">
+                                            <span class="text-[11px] text-slate-400" data-i18n="bubbleColorLabel">Пузырь</span>
+                                            <input type="color" id="settingsMyBubbleColor" class="w-8 h-6 rounded border-0 bg-transparent cursor-pointer">
+                                        </div>
+                                        <div class="flex items-center justify-between bg-slate-900 p-2 rounded-lg">
+                                            <span class="text-[11px] text-slate-400" data-i18n="textColorLabel">Текст</span>
+                                            <input type="color" id="settingsMyTextColor" class="w-8 h-6 rounded border-0 bg-transparent cursor-pointer">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Чужие сообщения -->
+                                <div class="bg-slate-950/40 p-3 rounded-xl border border-slate-800 space-y-2">
+                                    <span class="text-[11px] text-slate-400 font-bold uppercase tracking-wider block" data-i18n="theirBubbleLabel">Чужие сообщения (Слева)</span>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="flex items-center justify-between bg-slate-900 p-2 rounded-lg">
+                                            <span class="text-[11px] text-slate-400" data-i18n="bubbleColorLabel">Пузырь</span>
+                                            <input type="color" id="settingsTheirBubbleColor" class="w-8 h-6 rounded border-0 bg-transparent cursor-pointer">
+                                        </div>
+                                        <div class="flex items-center justify-between bg-slate-900 p-2 rounded-lg">
+                                            <span class="text-[11px] text-slate-400" data-i18n="textColorLabel">Текст</span>
+                                            <input type="color" id="settingsTheirTextColor" class="w-8 h-6 rounded border-0 bg-transparent cursor-pointer">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ПРАВАЯ СЕКЦИЯ: ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ ПРОЕКТА -->
+                    <div class="space-y-6 border-t md:border-t-0 md:border-l border-slate-800 pt-6 md:pt-0 md:pl-6">
+                        <div class="flex items-center gap-2 pb-2 border-b border-slate-800/60">
+                            <i data-lucide="shield-check" class="w-5 h-5 text-indigo-400"></i>
+                            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider" data-i18n="extraSettingsTitle">Дополнительные настройки</h4>
+                        </div>
+
+                        <!-- Конфиденциальность -->
+                        <div class="space-y-3">
+                            <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block" data-i18n="privacyLabel">Конфиденциальность</span>
+                            
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1" data-i18n="privacyLastSeenLabel">Показывать статус "был в сети"</label>
+                                <select id="settingsPrivacyLastSeen" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition text-xs">
+                                    <option value="everyone" data-i18n="privacyLastSeenEveryone">Всем</option>
+                                    <option value="contacts" data-i18n="privacyLastSeenContacts">Моим контактам</option>
+                                    <option value="nobody" data-i18n="privacyLastSeenNobody">Никому</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-center justify-between bg-slate-950/40 p-2.5 rounded-xl border border-slate-800">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-300" data-i18n="typingDelayLabel">Симуляция печатания</span>
+                                    <span class="text-[10px] text-slate-500" data-i18n="typingDelayDesc">Эмулировать "Печатает..." перед ответом бота</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingsTypingDelay" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-850 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 peer-checked:after:bg-white peer-checked:after:border-transparent"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Звуки и оповещения -->
+                        <div class="space-y-3">
+                            <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block" data-i18n="soundSection">Звук и уведомления</span>
+                            
+                            <div class="flex items-center justify-between bg-slate-950/40 p-2.5 rounded-xl border border-slate-800">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-300" data-i18n="soundEffectsLabel">Звуковые эффекты</span>
+                                    <span class="text-[10px] text-slate-500" data-i18n="soundEffectsDesc">Проигрывать при отправке и получении</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingsSoundEffects" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-850 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 peer-checked:after:bg-white peer-checked:after:border-transparent"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Юзабилити и поведение чата -->
+                        <div class="space-y-3">
+                            <span class="text-[11px] text-slate-500 font-bold uppercase tracking-wider block" data-i18n="behaviorLabel">Поведение чата</span>
+                            
+                            <div class="flex items-center justify-between bg-slate-950/40 p-2.5 rounded-xl border border-slate-800">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-300" data-i18n="enterSendLabel">Отправка клавишей Enter</span>
+                                    <span class="text-[10px] text-slate-500" data-i18n="enterSendDesc">Отправлять текст без Shift</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingsEnterSend" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-850 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 peer-checked:after:bg-white peer-checked:after:border-transparent"></div>
+                                </label>
+                            </div>
+
+                            <div class="flex items-center justify-between bg-slate-950/40 p-2.5 rounded-xl border border-slate-800">
+                                <div class="flex flex-col">
+                                    <span class="text-xs text-slate-300" data-i18n="compactModeLabel">Компактный вид</span>
+                                    <span class="text-[10px] text-slate-500" data-i18n="compactModeDesc">Уменьшить отступы пузырей переписки</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="settingsCompactMode" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-850 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 peer-checked:after:bg-white peer-checked:after:border-transparent"></div>
+                                </label>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1" data-i18n="disappearingMsgsLabel">Исчезающие сообщения</label>
+                                <select id="settingsDisappearing" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-slate-200 focus:outline-none focus:border-indigo-500 transition text-xs">
+                                    <option value="off" data-i18n="disappearingOff">Выключены</option>
+                                    <option value="24h" data-i18n="disappearing24h">24 часа</option>
+                                    <option value="7d" data-i18n="disappearing7d">7 дней</option>
+                                    <option value="90d" data-i18n="disappearing90d">90 дней</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Секция: Сброс данных -->
+                        <div class="space-y-3 border-t border-slate-800/80 pt-4">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider text-red-500" data-i18n="systemSection">Системные настройки</h4>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button type="button" onclick="handleLogout()" class="w-full py-2 px-4 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/20 hover:border-transparent transition text-center font-medium btn-anim text-xs" data-i18n="logoutBtn">
+                                    Выйти из аккаунта
+                                </button>
+                                <button type="button" onclick="resetApp()" class="w-full py-2 px-4 bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/20 hover:border-transparent transition text-center font-medium btn-anim text-xs" data-i18n="resetBtn">
+                                    Сбросить базу
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Кнопки внизу -->
+            <div class="p-4 border-t border-slate-800 flex justify-end space-x-2 bg-slate-950/50">
+                <button onclick="toggleSettingsModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl transition text-xs btn-anim" data-i18n="cancelBtn">Отмена</button>
+                <button onclick="saveSettings()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg transition text-xs font-semibold btn-anim" data-i18n="saveBtn">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО: ИНФОРМАЦИЯ О ПРОФИЛЕ -->
+    <div id="profileInfoModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- Шапка инфо -->
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-sm font-bold flex items-center gap-2">
+                    <i data-lucide="user" class="w-4 h-4 text-indigo-500"></i> <span data-i18n="appName">GzafChat</span>
+                </h3>
+                <button onclick="toggleProfileInfoModal()" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition btn-anim">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <!-- Карточка пользователя -->
+            <div class="p-6 flex flex-col items-center text-center space-y-4">
+                <!-- Контейнер аватары с интерактивным изменением наведения -->
+                <div class="relative group cursor-pointer flex-shrink-0 btn-anim" id="infoModalAvatarContainer">
+                    <img id="infoModalAvatar" src="" class="w-24 h-24 rounded-full object-cover ring-4 ring-indigo-500/30 shadow-xl" alt="Avatar">
+                    <div id="infoModalAvatarHover" class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                        <i data-lucide="camera" class="w-6 h-6 text-white animate-pulse"></i>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 id="infoModalName" class="text-lg font-bold text-slate-100"></h4>
+                    <p id="infoModalStatus" class="text-xs text-indigo-400 mt-1"></p>
+                </div>
+
+                <!-- Детальные поля -->
+                <div class="w-full border-t border-slate-800/80 pt-4 text-left space-y-3.5 text-xs">
+                    <div>
+                        <span class="text-slate-500 block uppercase tracking-wider font-bold text-[9px]" data-i18n="regBioLabel">О себе</span>
+                        <p id="infoModalBio" class="text-slate-300 mt-0.5 leading-relaxed"></p>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block uppercase tracking-wider font-bold text-[9px]" data-i18n="phoneLabel">Номер телефона</span>
+                        <p id="infoModalPhone" class="text-slate-300 mt-0.5 font-mono"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ГРУППЫ -->
+    <div id="groupModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md flex flex-col max-h-[90vh] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- Шапка модалки -->
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-base font-bold flex items-center gap-2" data-i18n="createGroupTitle">
+                    <i data-lucide="users" class="w-5 h-5 text-indigo-500"></i> Создать группу
+                </h3>
+                <button onclick="toggleGroupModal()" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition btn-anim">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- Контент -->
+            <div class="p-5 overflow-y-auto space-y-4 flex-1 text-sm">
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-1 font-semibold uppercase" data-i18n="groupNameLabel">Название группы</label>
+                    <input type="text" id="groupNameInput" required placeholder="например, Команда проекта" class="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-4 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                
+                <div>
+                    <label class="block text-[11px] text-slate-400 mb-2 font-semibold uppercase" data-i18n="chooseMembersLabel">Выберите участников</label>
+                    <div id="groupMembersList" class="space-y-2 max-h-48 overflow-y-auto bg-slate-950/50 p-3 rounded-xl border border-slate-800/60">
+                        <!-- Заполняется динамически списком контактов -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопки управления -->
+            <div class="p-4 border-t border-slate-800 flex justify-end space-x-2 bg-slate-950/50">
+                <button onclick="toggleGroupModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl transition text-xs btn-anim" data-i18n="cancelBtn">Отмена</button>
+                <button onclick="createGroup()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg transition text-xs font-semibold btn-anim" data-i18n="createGroupBtn">Создать</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ТЕЛЕФОННЫХ КОНТАКТОВ -->
+    <div id="phoneContactsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md flex flex-col max-h-[80vh] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- Шапка -->
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <h3 class="text-base font-bold flex items-center gap-2" data-i18n="phoneContactsTitle">
+                    <i data-lucide="contact" class="w-5 h-5 text-indigo-500"></i> Контакты на телефоне
+                </h3>
+                <button onclick="togglePhoneContactsModal()" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition btn-anim">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- Импорт контактов (.vcf) -->
+            <div class="p-4 border-b border-slate-800/60 bg-slate-950/20 space-y-2 text-xs">
+                <label class="block text-[11px] text-slate-400 font-semibold uppercase">Импорт контактов (.vcf)</label>
+                <input type="file" id="vcfFileInput" accept=".vcf" onchange="handleVCFImport(event)" class="block w-full text-xs text-slate-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600/20 file:text-indigo-400 hover:file:bg-indigo-600/30 cursor-pointer">
+            </div>
+
+            <!-- Добавление кастомного контакта вручную -->
+            <div class="p-4 border-b border-slate-800/60 bg-slate-950/10 space-y-3 text-xs">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="manualContactName" placeholder="Имя" class="bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                    <input type="text" id="manualContactPhone" placeholder="+7 (999) 000-00-00" class="bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition">
+                </div>
+                <button onclick="addManualContact()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg transition btn-anim uppercase tracking-wider" data-i18n="addManualContact">Добавить контакт</button>
+            </div>
+
+            <!-- Список контактов -->
+            <div class="p-4 overflow-y-auto space-y-3 flex-1 text-sm bg-slate-950/20" id="phoneContactsList">
+                <!-- Заполняется динамически из JS -->
+            </div>
+            
+            <!-- Подвал -->
+            <div class="p-4 border-t border-slate-800 flex justify-end bg-slate-950/50">
+                <button onclick="togglePhoneContactsModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-xl transition text-xs btn-anim" data-i18n="cancelBtn">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ИНТЕРФЕЙС АУДИОЗВОНКА (СТАТИЧЕСКИЙ ОВЕРЛЕЙ) -->
+    <div id="callOverlay" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md z-[250] flex flex-col items-center justify-between p-8 text-center animate-in fade-in duration-200">
+        <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-900 border border-slate-800 px-4 py-1.5 rounded-full mt-4">
+            <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-500"></i>
+            <span data-i18n="encryptedLabel">Зашифровано</span>
+        </div>
+
+        <div class="flex flex-col items-center space-y-6">
+            <div class="relative flex items-center justify-center">
+                <div id="callPulseRing" class="absolute w-36 h-36 bg-indigo-500/10 rounded-full"></div>
+                <img id="callContactAvatar" src="" class="w-28 h-28 rounded-full object-cover ring-4 ring-indigo-500/40 relative z-10 shadow-2xl" alt="Call Avatar">
+            </div>
+            <div>
+                <h2 id="callContactName" class="text-2xl font-bold tracking-wide">Собеседник</h2>
+                <p id="callState" class="text-sm text-indigo-400 font-medium tracking-wider mt-2">Инициализация...</p>
+            </div>
+        </div>
+
+        <div class="flex space-x-6 mb-8">
+            <button id="callMuteBtn" onclick="toggleCallMute()" class="w-14 h-14 bg-slate-800 hover:bg-slate-750 text-white rounded-full flex items-center justify-center transition btn-anim shadow-lg">
+                <i data-lucide="mic-off" class="w-5 h-5"></i>
+            </button>
+            <button onclick="endAudioCall()" class="w-16 h-16 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition btn-anim shadow-xl transform hover:rotate-90">
+                <i data-lucide="phone-off" class="w-6 h-6"></i>
+            </button>
+            <button id="callSpeakerBtn" onclick="toggleCallSpeaker()" class="w-14 h-14 bg-slate-800 hover:bg-slate-750 text-white rounded-full flex items-center justify-center transition btn-anim shadow-lg">
+                <i data-lucide="volume-2" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ИНТЕРФЕЙС ВИДЕОЗВОНКА (СТАТИЧЕСКИЙ ОВЕРЛЕЙ) -->
+    <div id="videoCallOverlay" class="hidden fixed inset-0 bg-slate-950 z-[250] flex flex-col justify-between animate-in fade-in duration-200 overflow-hidden">
+        
+        <!-- Верхняя информационная плашка -->
+        <div class="absolute top-4 left-4 right-4 z-30 flex justify-between items-center bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/5">
+            <div class="flex items-center space-x-3">
+                <div class="overflow-hidden">
+                    <h3 id="videoCallContactName" class="font-bold text-sm text-white truncate"></h3>
+                    <p id="videoCallState" class="text-xs text-indigo-400 font-medium mt-0.5 tracking-wider">Подключение...</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full font-semibold uppercase tracking-wider">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> <span data-i18n="encryptedLabel">Зашифровано</span>
+            </div>
+        </div>
+
+        <!-- Центральный видеоконтент (Удаленный абонент на весь экран) -->
+        <div class="flex-1 w-full h-full relative bg-slate-950 flex items-center justify-center">
+            
+            <!-- Состояние вызова (до ответа собеседника) -->
+            <div id="videoCallRemoteCalling" class="flex flex-col items-center space-y-4 z-20">
+                <img id="videoCallRemoteAvatar" src="" class="w-24 h-24 rounded-full object-cover ring-4 ring-indigo-500/30 animate-pulse">
+                <p class="text-xs text-slate-400" data-i18n="videoCallRemoteCalling">Ожидание ответа удаленного терминала...</p>
+            </div>
+
+            <!-- Имитация видеопотока удаленного пользователя после ответа -->
+            <div id="videoCallRemotePlaceholder" class="hidden absolute inset-0 w-full h-full flex items-center justify-center bg-gradient-to-tr from-slate-950 via-indigo-950/20 to-slate-900">
+                <div class="absolute text-center opacity-25">
+                    <i data-lucide="video" class="w-20 h-20 mx-auto text-indigo-400 animate-pulse mb-2"></i>
+                    <p class="text-xs tracking-widest uppercase font-bold text-slate-400">Secure Remote Feed</p>
+                </div>
+            </div>
+
+            <!-- МИНИ-ОКНО: ЛОКАЛЬНЫЙ ПОЛЬЗОВАТЕЛЬ (КАМЕРА С КОРРЕКТНЫМ ПЕРЕКРЫТИЕМ) -->
+            <div class="absolute bottom-28 right-4 w-28 h-40 sm:w-36 sm:h-48 rounded-2xl border border-white/10 shadow-2xl overflow-hidden z-20 bg-slate-900 flex items-center justify-center">
+                <!-- Реальный тег для вывода видео с камеры смартфона/ноутбука -->
+                <video id="localVideo" autoplay playsinline muted class="hidden w-full h-full object-cover transform -scale-x-100"></video>
+                
+                <!-- Анимированная SVG симуляция если нет камеры -->
+                <div id="localVideoSimulated" class="hidden w-full h-full bg-gradient-to-b from-indigo-600/30 to-slate-950 relative flex items-center justify-center">
+                    <span class="absolute top-2 left-2 text-[8px] font-mono bg-indigo-600 text-white px-1.5 py-0.5 rounded uppercase tracking-wider animate-pulse">SIM FEEED</span>
+                    <i data-lucide="user" class="w-8 h-8 text-indigo-400 animate-bounce"></i>
+                </div>
+
+                <!-- Заглушка если камера выключена пользователем -->
+                <div id="localVideoPlaceholder" class="hidden w-full h-full bg-slate-950 flex flex-col items-center justify-center text-center p-2 text-red-400">
+                    <i data-lucide="video-off" class="w-5 h-5"></i>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Нижняя панель управления звонком -->
+        <div class="absolute bottom-6 left-0 right-0 z-30 flex justify-center items-center space-x-5 px-4">
+            <button id="videoCallMuteBtn" onclick="toggleCallMute()" class="w-12 h-12 bg-slate-900/80 hover:bg-slate-800 text-white border border-white/5 rounded-full flex items-center justify-center transition btn-anim shadow-lg">
+                <i data-lucide="mic-off" class="w-5 h-5"></i>
+            </button>
+            <button onclick="endVideoCall()" class="w-14 h-14 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition btn-anim shadow-xl transform hover:rotate-90">
+                <i data-lucide="phone-off" class="w-5 h-5"></i>
+            </button>
+            <button id="videoCallCameraBtn" onclick="toggleVideoCallCamera()" class="w-12 h-12 bg-indigo-600 hover:bg-indigo-500 text-white border border-white/5 rounded-full flex items-center justify-center transition btn-anim shadow-lg">
+                <i data-lucide="video" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- ОВЕРЛЕЙ ДЛЯ ПОЛНОЭКРАННОГО ПРОСМОТРА СТАТУСОВ -->
+    <div id="statusViewerOverlay" class="hidden fixed inset-0 bg-black z-[300] flex flex-col justify-between p-4 animate-in fade-in duration-200" onclick="closeStatusViewer()">
+        <!-- Индикатор прогресса -->
+        <div class="w-full flex space-x-1 px-2 mt-2">
+            <div class="h-1 bg-white/20 rounded-full flex-1 overflow-hidden">
+                <div id="statusProgressBar" class="h-full bg-indigo-500 w-0"></div>
+            </div>
+        </div>
+        <!-- Шапка -->
+        <div class="flex justify-between items-center px-2 text-white">
+            <div class="flex items-center space-x-3">
+                <img id="statusViewerAvatar" src="" class="w-10 h-10 rounded-full object-cover border border-white/20">
+                <div>
+                    <h4 id="statusViewerName" class="font-bold text-sm"></h4>
+                    <p id="statusViewerTime" class="text-xs text-slate-400"></p>
+                </div>
+            </div>
+            <button class="p-2 text-white/80 hover:text-white transition" onclick="closeStatusViewer()"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <!-- Контент -->
+        <div class="flex-1 flex flex-col items-center justify-center p-4">
+            <img id="statusViewerImage" src="" class="max-w-full max-h-[70vh] rounded-2xl object-contain shadow-2xl">
+            <p id="statusViewerText" class="text-white text-base font-semibold mt-4 text-center px-4 max-w-md drop-shadow"></p>
+        </div>
+    </div>
+
+
+    <!-- СКРИПТ ПРИЛОЖЕНИЯ -->
+    <script>
+        // Демо-пользователи в базе данных по умолчанию
+        const initialUsers = [
+            {
+                username: "admin",
+                password: "admin",
+                displayName: "Константин (Админ)",
+                avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+                bio: "Разработчик GzafChat. Люблю экспериментировать с кодом и улучшать дизайн! ☕💻",
+                phone: "+7 (999) 777-77-77"
+            }
+        ];
+
+        // Первоначальный список телефонных контактов пустой, чтобы не показывать случайных незнакомцев
+        let mockPhoneContacts = [];
+
+        // Стандартные контакты по умолчанию
+        const defaultChats = [
+            {
+                id: 1,
+                name: "Алиса Дизайнер",
+                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+                status: "в сети",
+                bio: "Проектирую удобные интерфейсы. Люблю минимализм и темные оттенки. Всегда открыта к предложениям! 🎨✨",
+                phone: "+7 (921) 555-43-21",
+                messages: [
+                    { id: 1, text: "Привет! Как тебе новый макет мессенджера?", sender: 'them', type: 'text', timestamp: '14:20' },
+                    { id: 2, text: "Выглядит потрясающе! Мне нравится цветовая гамма.", sender: 'me', type: 'text', timestamp: '14:22' },
+                    { id: 3, text: "Отлично, сегодня закончу остальные экраны и пришлю.", sender: 'them', type: 'text', timestamp: '14:23' }
+                ],
+                unread: 0,
+                botReplies: [
+                    "Давай сделаем кнопку отправки чуть ярче?",
+                    "Я отправлю тебе фигму через час.",
+                    "Как тебе идея добавить темную тему по умолчанию?",
+                    "Супер! Рада, что тебе нравится 👍"
+                ]
+            },
+            {
+                id: 2,
+                name: "Боб Разработчик",
+                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+                status: "был(а) недавно",
+                bio: "Фуллстек-разработчик. Автоматизирую всё, что движется. Люблю писать код под приятный лоу-фай 💻☕",
+                phone: "+7 (911) 444-12-34",
+                messages: [
+                    { id: 1, text: "Привет, API для отправки файлов готово. Можешь проверять.", sender: 'them', type: 'text', timestamp: '11:05' }
+                ],
+                unread: 1,
+                botReplies: [
+                    "Да, код уже в ветке main. Можешь стянуть.",
+                    "Я пофиксил баг с прокруткой сообщений на мобилках.",
+                    "Завтра начну настраивать базу данных.",
+                    "Давай созвонимся позже, обсудим API."
+                ]
+            }
+        ];
+
+        // Статические мок-статусы от контактов
+        const mockStatuses = [
+            {
+                id: 101,
+                name: "Алиса Дизайнер",
+                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+                media: "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=500",
+                text: "Работаю над новым интерфейсом GzafChat v2! 🎨✨",
+                time: "15 минут назад"
+            },
+            {
+                id: 102,
+                name: "Боб Разработчик",
+                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+                media: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500",
+                text: "Пофиксил все баги, можно пить кофе ☕💻",
+                time: "2 часа назад"
+            }
+        ];
+
+        // Стандартные настройки профиля с дефолтными HEX-цветами (используются при создании новой сессии)
+        const defaultProfileTemplate = {
+            name: "Вы",
+            avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>",
+            bio: "Люблю кастомизацию в GzafChat!",
+            phone: "",
+            chatBgColor: "#020617",
+            myBubbleColor: "#4f46e5",
+            myTextColor: "#ffffff",
+            theirBubbleColor: "#1e293b",
+            theirTextColor: "#f1f5f9"
+        };
+
+        // Заглушка аватара в виде Base64-SVG
+        const defaultBlankAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+
+        // Словарь локализации (Русский, Азербайджанский, Английский)
+        const translations = {
+            ru: {
+                appName: "GzafChat",
+                authTitle: "Вход в GzafChat",
+                authSubtitle: "Введите ваши данные для доступа к переписке",
+                loginBtn: "Войти в аккаунт",
+                noAccount: "Нет аккаунта?",
+                registerLink: "Зарегистрироваться",
+                usernameLabel: "Имя пользователя (Никнейм)",
+                passwordLabel: "Пароль",
+                regTitle: "Регистрация",
+                regSubtitle: "Создайте новую учетную запись в системе",
+                regUsernameLabel: "Имя пользователя (Уникальный ник)",
+                regDisplayNameLabel: "Отображаемое имя",
+                regPasswordLabel: "Пароль",
+                regPhoneLabel: "Номер телефона",
+                regBioLabel: "О себе",
+                createAccountBtn: "Создать аккаунт",
+                alreadyHaveAccount: "Уже есть аккаунт?",
+                loginLink: "Войти",
+                welcomeTitle: "Добро пожаловать в GzafChat",
+                welcomeDesc: "Выберите чат. Кликните по аватарке собеседника или своей, чтобы открыть информацию о профиле.",
+                settingsTitle: "Настройки дизайна и профиля",
+                profileSection: "Мой Профиль",
+                displayNameLabel: "Отображаемое имя",
+                bioLabel: "О себе (Статус)",
+                phoneLabel: "Номер телефона",
+                designSection: "Кастомизация дизайна чата",
+                chatBgLabel: "Фон переписки (Задний план)",
+                myBubbleLabel: "Мои сообщения (Справа)",
+                theirBubbleLabel: "Чужие сообщения (Слева)",
+                bubbleColorLabel: "Пузырь",
+                textColorLabel: "Текст",
+                systemSection: "Системные настройки",
+                logoutBtn: "Выйти из аккаунта",
+                resetBtn: "Сбросить базу",
+                cancelBtn: "Отмена",
+                saveBtn: "Сохранить",
+                createGroupTitle: "Создать группу",
+                groupNameLabel: "Название группы",
+                chooseMembersLabel: "Выберите участников",
+                createGroupBtn: "Создать",
+                groupCreatedMsg: "Группа создана",
+                successAlertTitle: "Успешно!",
+                alertOkBtn: "Отлично",
+                regSuccessTitle: "Успешная регистрация!",
+                regSuccessMsg: "Ваш профиль в GzafChat успешно создан. Теперь вы можете войти в систему и установить фотографию в вашей карточке профиля.",
+                cameraDisabledMsg: "Камера не найдена. Активирована интерактивная симуляция потока.",
+                encryptedLabel: "Зашифровано",
+                videoCallStateCalling: "Вызов...",
+                videoCallStateConnecting: "Инициализация терминала...",
+                videoCallStateActive: "В эфире (Защищенное соединение)",
+                videoCallRemoteCalling: "Ожидание ответа удаленного терминала...",
+                onlineStatus: "в сети",
+                offlineStatus: "был(а) недавно",
+                groupChatStatus: "групповой чат",
+                customBgColor: "Цвет",
+                searchPlaceholder: "Поиск контактов...",
+                messageInputPlaceholder: "Напишите сообщение...",
+                systemGroupCreated: 'Группа "{groupName}" успешно создана.',
+                logoutConfirm: "Вы действительно хотите выйти из своего аккаунта?",
+                resetConfirm: "Вы действительно хотите полностью очистить ВСЕ данные мессенджера (включая всех пользователей и настройки)?",
+                enterGroupName: "Пожалуйста, введите название группы.",
+                selectOneMember: "Выберите хотя бы одного участника группы.",
+                noContacts: "Нет доступных участников",
+                errorAuth: "Неверное имя пользователя или пароль.",
+                usernameLengthError: "Имя пользователя должно быть не менее 3 символов, пароль — не менее 4 символов.",
+                usernameExistsError: "Пользователь с таким никнеймом уже зарегистрирован!",
+                themeLabel: "Тема оформления",
+                themeDark: "Тёмная",
+                themeLight: "Светлая",
+                langLabel: "Язык интерфейса",
+                phoneContactsTitle: "Контакты на телефоне",
+                inviteBtn: "Пригласить",
+                invitationSentTitle: "Приглашение отправлено",
+                invitationSentMsg: "Ссылка-приглашение в GzafChat успешно отправлена на номер {phone}.",
+                phoneContactsTooltip: "Посмотреть контакты телефона",
+                addManualContact: "Добавить вручную",
+
+                // Новые переводы для вкладок и дополнительных настроек
+                tabChatsTooltip: "Чаты",
+                tabStatusesTooltip: "Статусы",
+                tabCallsTooltip: "Звонки",
+                statusTabTitle: "Мой статус",
+                addStatusBtn: "Добавить",
+                myStatusLabel: "Мой статус",
+                noStatusYet: "Нажмите, чтобы добавить или просмотреть",
+                recentStatuses: "Недавние обновления",
+                callTabTitle: "Журнал звонков",
+                clearCallsBtn: "Очистить",
+                recentCalls: "Последние звонки",
+                noCalls: "Звонков пока не было",
+                extraSettingsTitle: "Дополнительные настройки",
+                privacyLabel: "Конфиденциальность",
+                soundSection: "Звук и уведомления",
+                soundEffectsLabel: "Звуковые эффекты",
+                soundEffectsDesc: "Проигрывать при отправке и получении",
+                behaviorLabel: "Поведение чата",
+                enterSendLabel: "Отправка клавишей Enter",
+                enterSendDesc: "Отправлять сообщения без зажатия Shift",
+                compactModeLabel: "Компактный вид",
+                compactModeDesc: "Уменьшить отступы пузырей переписки",
+                typingDelayLabel: "Симуляция печатания",
+                typingDelayDesc: "Эмулировать 'Печатает...' перед ответом бота",
+                disappearingMsgsLabel: "Исчезающие сообщения",
+                disappearingOff: "Выключены",
+                disappearing24h: "24 часа",
+                disappearing7d: "7 дней",
+                disappearing90d: "90 дней",
+                privacyLastSeenLabel: "Показывать статус 'был в сети'",
+                privacyLastSeenEveryone: "Всем",
+                privacyLastSeenContacts: "Моим контактам",
+                privacyLastSeenNobody: "Никому",
+                statusAddedAlert: "Ваш статус успешно обновлен!",
+                callIncoming: "Входящий",
+                callOutgoing: "Исходящий",
+                callMissed: "Пропущенный",
+                callHistoryCleared: "Журнал звонков очищен.",
+
+                // Локализация встроенных контактов и их Bio
+                nameAdmin: "Константин (Админ)",
+                nameAlice: "Алиса Дизайнер",
+                nameBob: "Боб Разработчик",
+                bioAdmin: "Разработчик GzafChat. Люблю экспериментировать с кодом и улучшать дизайн! ☕💻",
+                bioAlice: "Проектирую удобные интерфейсы. Люблю минимализм и темные оттенки. Всегда открыта к предложениям! 🎨✨",
+                bioBob: "Фуллстек-разработчик. Автоматизирую всё, что движется. Люблю писать код под приятный лоу-фай 💻☕",
+
+                // Локализация для Восстановления Пароля
+                forgotPasswordLink: "Забыли пароль?",
+                forgotTitle: "Password Recovery",
+                forgotSubtitle: "Введите имя, зарегистрированный телефон и новый пароль для сброса",
+                forgotBtn: "Сбросить и установить новый пароль",
+                forgotUsernameLabel: "Username",
+                forgotPhoneLabel: "Phone Number",
+                forgotNewPasswordLabel: "New Password",
+                backToLoginLink: "Back to Login",
+                forgotSuccessTitle: "Password Reset Successful!",
+                forgotSuccessMsg: "Your password has been successfully updated. You can now log in.",
+                forgotErrorMsg: "User with this username and phone number was not found in the system.",
+
+                // Глобальный поиск
+                globalSearchHeader: "Глобальный поиск",
+                startChatBadge: "Начать чат"
+            },
+            az: {
+                appName: "GzafChat",
+                authTitle: "GzafChat-a Giriş",
+                authSubtitle: "Məlumatlarınızı daxil edin",
+                loginBtn: "Daxil ol",
+                noAccount: "Hesabınız yoxdur?",
+                registerLink: "Qeydiyyatdan keçin",
+                usernameLabel: "İstifadəçi adı (Nik)",
+                passwordLabel: "Şifrə",
+                regTitle: "Qeydiyyat",
+                regSubtitle: "Sistemdə yeni hesab yaradın",
+                regUsernameLabel: "İstifadəçi adı",
+                regDisplayNameLabel: "Görünən ad",
+                regPasswordLabel: "Şifrə",
+                regPhoneLabel: "Telefon nömrəsi",
+                regBioLabel: "Haqqımda",
+                createAccountBtn: "Hesab yarat",
+                alreadyHaveAccount: "Hesabınız var?",
+                loginLink: "Daxil ol",
+                welcomeTitle: "GzafChat-a xoş gəlmisiniz",
+                welcomeDesc: "Söhbət seçin.",
+                settingsTitle: "Dizayn və profil ayarları",
+                profileSection: "Mənim Profilim",
+                displayNameLabel: "Görünən ad",
+                bioLabel: "Haqqımda",
+                phoneLabel: "Telefon nömrəsi",
+                designSection: "Söhbət dizaynı",
+                chatBgLabel: "Yazışma fonu",
+                myBubbleLabel: "Mənim mesajlarım",
+                theirBubbleLabel: "Başqasının mesajları",
+                bubbleColorLabel: "Balon",
+                textColorLabel: "Mətn",
+                systemSection: "Sistem Ayarları",
+                logoutBtn: "Hesabdan çıx",
+                resetBtn: "Baza sıfırla",
+                cancelBtn: "Ləğv et",
+                saveBtn: "Yadda saxla",
+                createGroupTitle: "Qrup yarat",
+                groupNameLabel: "Qrup adı",
+                chooseMembersLabel: "İştirakçıları seçin",
+                createGroupBtn: "Yarat",
+                groupCreatedMsg: "Qrup yaradıldı",
+                successAlertTitle: "Uğurlu!",
+                alertOkBtn: "Əla",
+                regSuccessTitle: "Qeydiyyat tamamlandı!",
+                regSuccessMsg: "Profiliniz uğurla yaradıldı.",
+                cameraDisabledMsg: "Kamera tapılmadı.",
+                encryptedLabel: "Şifrələnmiş",
+                videoCallStateCalling: "Zəng edilir...",
+                videoCallStateConnecting: "Qoşulur...",
+                videoCallStateActive: "Efirda",
+                videoCallRemoteCalling: "Cavab gözlənilir...",
+                onlineStatus: "onlayn",
+                offlineStatus: "bu yaxınlarda olub",
+                groupChatStatus: "qrup söhbəti",
+                customBgColor: "Rəng",
+                searchPlaceholder: "Axtar...",
+                messageInputPlaceholder: "Mesaj yazın...",
+                systemGroupCreated: '"{groupName}" qrupu yaradıldı.',
+                logoutConfirm: "Çıxmaq istədiyinizə əminsiniz?",
+                resetConfirm: "Sıfırlamaq istədiyinizə əminsiniz?",
+                enterGroupName: "Qrup adını daxil edin.",
+                selectOneMember: "Ən azı bir iştirakçı seçin.",
+                noContacts: "Əlçatan iştirakçı yoxdur",
+                errorAuth: "İstifadəçi adı və ya şifrə yanlışdır.",
+                usernameLengthError: "İstifadəçi adı ən azı 3, şifrə ən azı 4 simvol olmalıdır.",
+                usernameExistsError: "Bu nik istifadə olunur!",
+                themeLabel: "Dizayn mövzusu",
+                themeDark: "Qaranlıq",
+                themeLight: "Açıq",
+                langLabel: "İnterfeys dili",
+                phoneContactsTitle: "Telefondakı kontaktlar",
+                inviteBtn: "Dəvət et",
+                invitationSentTitle: "Dəvətnamə göndərildi",
+                invitationSentMsg: "GzafChat-a dəvət linki {phone} nömrəsinə göndərildi.",
+                phoneContactsTooltip: "Telefon kontaktlarına baxın",
+                addManualContact: "Əl ilə əlavə et",
+
+                tabChatsTooltip: "Söhbətlər",
+                tabStatusesTooltip: "Statuslar",
+                tabCallsTooltip: "Zənglər",
+                statusTabTitle: "Mənim statusum",
+                addStatusBtn: "Əlavə et",
+                myStatusLabel: "Mənim statusum",
+                noStatusYet: "Əlavə etmək üçün klikləyin",
+                recentStatuses: "Son yeniləmələr",
+                callTabTitle: "Zəng tarixçəsi",
+                clearCallsBtn: "Təmizlə",
+                recentCalls: "Son zənglər",
+                noCalls: "Zəng tarixçəsi boşdur",
+                extraSettingsTitle: "Əlavə parametrlər",
+                privacyLabel: "Məxfilik",
+                soundSection: "Səs və Bildirişlər",
+                soundEffectsLabel: "Səs effektləri",
+                soundEffectsDesc: "Mesaj göndəriləndə və alınanda səs çıxsın",
+                behaviorLabel: "Söhbət davranışı",
+                enterSendLabel: "Enter düyməsi ilə göndər",
+                enterSendDesc: "Shift olmadan mesajları göndər",
+                compactModeLabel: "Yığcam rejim",
+                compactModeDesc: "Mesajların kənar boşluqlarını azaldın",
+                typingDelayLabel: "Yazma simulyasiyası",
+                typingDelayDesc: "Botun cavabından əvvəl 'Yazır...' görsənsin",
+                disappearingMsgsLabel: "İtən mesajlar",
+                disappearingOff: "Söndürülüb",
+                disappearing24h: "24 saat",
+                disappearing7d: "7 gün",
+                disappearing90d: "90 gün",
+                privacyLastSeenLabel: "Son görünmə statusu",
+                privacyLastSeenEveryone: "Hər kəsə",
+                privacyLastSeenContacts: "Kontaktlarıma",
+                privacyLastSeenNobody: "Heç kimə",
+                statusAddedAlert: "Statusunuz uğurla əlavə edildi!",
+                callIncoming: "Gələn",
+                callOutgoing: "Gedən",
+                callMissed: "Buraxılmış",
+                callHistoryCleared: "Zəng tarixçəsi təmizləndi.",
+
+                // Kontaktyarın tərcümələri və Haqqında (Bio)
+                nameAdmin: "Konstantin (Admin)",
+                nameAlice: "Alis Dizayner",
+                nameBob: "Bob Tərtibatçı",
+                bioAdmin: "GzafChat tərtibatçısı. Kodla təcrübə aparmağı və dizaynı təkmilləşdirməyi sevirəm! ☕💻",
+                bioAlice: "Rahat interfeyslər hazırlayıram. Minimalizmi və tünd çalarları sevirəm. Hər zaman təkliflərə açığam! 🎨✨",
+                bioBob: "Fullstack proqramçı. Hərəkət edən hər şeyi avtomatlaşdırıram. Layt lofi musiqisi altında kod yazmağı sevirəm 💻☕",
+
+                // Şifrə bərpası üçün tərcümələr
+                forgotPasswordLink: "Şifrəni unutmusunuz?",
+                forgotTitle: "Şifrənin bərpası",
+                forgotSubtitle: "Şifrəni sıfırlamaq üçün istifadəçi adını, qeydiyyatlı telefonu və yeni şifrəni daxil edin",
+                forgotBtn: "Sıfırla və yeni şifrə təyin et",
+                forgotUsernameLabel: "İstifadəçi adı (Nik)",
+                forgotPhoneLabel: "Telefon nömrəsi",
+                forgotNewPasswordLabel: "Yeni şifrə",
+                backToLoginLink: "Girişə qayıt",
+                forgotSuccessTitle: "Şifrə dəyişdirildi!",
+                forgotSuccessMsg: "Şifrəniz uğurla dəyişdirildi. İndi daxil ola bilərsiniz.",
+                forgotErrorMsg: "Bu istifadəçi adı və telefon nömrəsinə uyğun sistemdə istifadəçi tapılmadı.",
+
+                // Global axtarış
+                globalSearchHeader: "Qlobal axtarış",
+                startChatBadge: "Söhbətə başla"
+            },
+            en: {
+                appName: "GzafChat",
+                authTitle: "Sign in to GzafChat",
+                authSubtitle: "Enter your credentials to access chats",
+                loginBtn: "Log In",
+                noAccount: "Don't have an account?",
+                registerLink: "Register",
+                usernameLabel: "Username",
+                passwordLabel: "Password",
+                regTitle: "Registration",
+                regSubtitle: "Create a new account in the system",
+                regUsernameLabel: "Username",
+                regDisplayNameLabel: "Display Name",
+                regPasswordLabel: "Password",
+                regPhoneLabel: "Phone Number",
+                regBioLabel: "About Me",
+                createAccountBtn: "Create Account",
+                alreadyHaveAccount: "Already have an account?",
+                loginLink: "Log In",
+                welcomeTitle: "Welcome to GzafChat",
+                welcomeDesc: "Choose a chat.",
+                settingsTitle: "Design & Profile Settings",
+                profileSection: "My Profile",
+                displayNameLabel: "Display Name",
+                bioLabel: "About Me",
+                phoneLabel: "Phone Number",
+                designSection: "Customize Chat Design",
+                chatBgLabel: "Chat Background",
+                myBubbleLabel: "My Messages",
+                theirBubbleLabel: "Their Messages",
+                bubbleColorLabel: "Bubble",
+                textColorLabel: "Text",
+                systemSection: "System Settings",
+                logoutBtn: "Log Out",
+                resetBtn: "Reset DB",
+                cancelBtn: "Cancel",
+                saveBtn: "Save",
+                createGroupTitle: "Create Group",
+                groupNameLabel: "Group Name",
+                chooseMembersLabel: "Select Members",
+                createGroupBtn: "Create",
+                groupCreatedMsg: "Group Created",
+                successAlertTitle: "Success!",
+                alertOkBtn: "Excellent",
+                regSuccessTitle: "Registration Successful!",
+                regSuccessMsg: "Your profile has been created.",
+                cameraDisabledMsg: "Camera not found.",
+                encryptedLabel: "Encrypted",
+                videoCallStateCalling: "Calling...",
+                videoCallStateConnecting: "Connecting...",
+                videoCallStateActive: "On Air",
+                videoCallRemoteCalling: "Waiting for reply...",
+                onlineStatus: "online",
+                offlineStatus: "recently seen",
+                groupChatStatus: "group chat",
+                customBgColor: "Color",
+                searchPlaceholder: "Search contacts...",
+                messageInputPlaceholder: "Type a message...",
+                systemGroupCreated: 'Group "{groupName}" created.',
+                logoutConfirm: "Are you sure you want to log out?",
+                resetConfirm: "Are you sure you want to reset everything?",
+                enterGroupName: "Enter a group name.",
+                selectOneMember: "Select at least one member.",
+                noContacts: "No members available",
+                errorAuth: "Incorrect credentials.",
+                usernameLengthError: "Username min 3, Password min 4 chars.",
+                usernameExistsError: "Username already taken!",
+                themeLabel: "Theme",
+                themeDark: "Dark",
+                themeLight: "Light",
+                langLabel: "Language",
+                phoneContactsTitle: "Phone Contacts",
+                inviteBtn: "Invite",
+                invitationSentTitle: "Invitation Sent",
+                invitationSentMsg: "Invitation link successfully sent to {phone}.",
+                phoneContactsTooltip: "View phone contacts",
+                addManualContact: "Add manually",
+
+                tabChatsTooltip: "Chats",
+                tabStatusesTooltip: "Statuses",
+                tabCallsTooltip: "Calls",
+                statusTabTitle: "My Status",
+                addStatusBtn: "Add",
+                myStatusLabel: "My Status",
+                noStatusYet: "Click to add or view status",
+                recentStatuses: "Recent Updates",
+                callTabTitle: "Call History",
+                clearCallsBtn: "Clear",
+                recentCalls: "Recent Calls",
+                noCalls: "No call logs yet",
+                extraSettingsTitle: "Additional Settings",
+                privacyLabel: "Privacy",
+                soundSection: "Sound & Notifications",
+                soundEffectsLabel: "Sound Effects",
+                soundEffectsDesc: "Play sound on sending and receiving",
+                behaviorLabel: "Chat Behavior",
+                enterSendLabel: "Enter to Send",
+                enterSendDesc: "Send messages without holding Shift",
+                compactModeLabel: "Compact UI Mode",
+                compactModeDesc: "Reduce paddings of message bubbles",
+                typingDelayLabel: "Typing Simulation",
+                typingDelayDesc: "Simulate 'Typing...' before bot replies",
+                disappearingMsgsLabel: "Disappearing Messages",
+                disappearingOff: "Off",
+                disappearing24h: "24 Hours",
+                disappearing7d: "7 Days",
+                disappearing90d: "90 Days",
+                privacyLastSeenLabel: "Show 'last seen' status",
+                privacyLastSeenEveryone: "Everyone",
+                privacyLastSeenContacts: "My Contacts",
+                privacyLastSeenNobody: "Nobody",
+                statusAddedAlert: "Status successfully updated!",
+                callIncoming: "Incoming",
+                callOutgoing: "Outgoing",
+                callMissed: "Missed",
+                callHistoryCleared: "Call history cleared.",
+
+                // Translator for Built-in contacts & Bio
+                nameAdmin: "Constantine (Admin)",
+                nameAlice: "Alice Designer",
+                nameBob: "Bob Developer",
+                bioAdmin: "GzafChat Developer. Love experimenting with code and improving design! ☕💻",
+                bioAlice: "Designing comfortable interfaces. I love minimalism and dark shades. Always open to suggestions! 🎨✨",
+                bioBob: "Full-stack developer. Automating everything that moves. Love coding with lo-fi music 💻☕",
+
+                // Forgot Password Translations
+                forgotPasswordLink: "Forgot Password?",
+                forgotTitle: "Password Recovery",
+                forgotSubtitle: "Enter username, registered phone and new password to reset",
+                forgotBtn: "Reset and Set New Password",
+                forgotUsernameLabel: "Username",
+                forgotPhoneLabel: "Phone Number",
+                forgotNewPasswordLabel: "New Password",
+                backToLoginLink: "Back to Login",
+                forgotSuccessTitle: "Password Reset Successful!",
+                forgotSuccessMsg: "Your password has been successfully updated. You can now log in.",
+                forgotErrorMsg: "User with this username and phone number was not found in the system.",
+
+                // Global Search
+                globalSearchHeader: "Global Search",
+                startChatBadge: "Start Chat"
+            }
+        };
+
+        // Категории смайликов
+        const emojiCategories = {
+            "Смайлики": [
+                "😊","😂","😍","🥰","😘","😜","😎","🤔","🙄","😴","😡","😭","😱","🥳","🤩","😏",
+                "😅","🤤","🤮","🤯","🤠","😇","🤫","🤡","🤖","👾","👽","💀","👻","💩","😈","👀",
+                "🤣","😃","😄","😁","😆","😉","😋","😛","😝","🤪","🤨","🧐","🤓","🥸","😏","😒",
+                "😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😤","😠","🤬","😳",
+                "🥵","🥶","😱","😨","😰","😥","😓","🤗","🫣","🤭","🤥","😶","😐","😑","😬","🫨",
+                "🫠","🙄","😯","😦","😧","😮","😲","🥱","😴","💤","💩","🤡","👽","👾","🤖","🎃",
+                "😺","😸","😹","😻","😼","😽","🙀","😿","😾"
+            ],
+            "Жесты / Люди": [
+                "👍","👎","👌","✌️","👋","👏","🙏","🙌","💪","👊","✊","🤝","🖕","✍️","💅","🧠",
+                "🖖","🤘","🤙","🤞","🤟","🫵","👉","👈","👆","👇","☝️","✋","🖐️","🤚","🦾","🦿",
+                "🦵","🦶","👂","🦻","👃","🫀","🫁","🦷","👁️","👀","👤","👥","🫂","✍️","🤳"
+            ],
+            "Природа / Животные": [
+                "🐱","🐶","🦊","🦁","🐼","🐸","🐵","🦄","🌹","🌸","🌲","🌵","🌍","☀️","🌙","🔥",
+                "🐕","🐈","🐆","🐴","🦓","🦌","🦬","🐮","🐷","🐏","🐑","🐐","🐪","🐫","🦙","🦒",
+                "🐘","🦣","🦏","🦛","🐭","🐰","🐿️","🦫","🦔","🦇","🐻","🐨","🦥","🦦","🦨","🦘",
+                "🦡","🦅","🦆","🦢","🦉","🦤","🦩","🦚","🦜","🐊","🐢","🦎","🐍","🐲","🐙","🦑",
+                "🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧"
+            ],
+            "Еда / Напитки": [
+                "🍕","🍔","🍟","🍣","🍦","🍰","☕","🍺","🍏","🍎","🍐","🍊","🍋","🍌","🍉","🍇",
+                "🍓","🫐","🍈","🍒","🍑","🥭","🍍","🥥","👑","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️",
+                "🫑","🌽","🥕","🧄","🧅","🥔","🍠","🥐","🍞","🥖","🫓","🥨","🥯","🥞","🧇",
+                "🧀","🍖","🍗","🥩","🥓","🌭","🥪","🌮","🌯","🫔","🥙","🧆","🍳","🥘","🍲"
+            ],
+            "Сердца / Символы": [
+                "❤️","🧡","💛","💚","💙","💜","🖤","🤍","💔","💖","✨","🌟","💯","🎉","🚀","💻",
+                "📱","🎮","🎵","💵","🎁","🎈","🔑","🎯","❤️‍🔥","❤️‍🩹","❣️","💕","💞","💓","💗","💘",
+                "💝","💟","💌","💥","💫","💦","💨","🕳️","💬","💭","💤","🌐","🌀","🌈","⚡","❄️",
+                "🔥","💧","🌊","🎈","🎉","🎊","🎁","🎗️","🎟️","🎫","🏆","🏅","🥇","🥈","🥉"
+            ]
+        };
+
+        // Безопасная инициялизация языка и темы
+        let currentLang = localStorage.getItem('gzafchat_lang') || 'ru';
+        let currentTheme = localStorage.getItem('gzafchat_theme') || 'dark';
+
+        // Инициализация дополнительных настроек проекта
+        let soundEffectsEnabled = localStorage.getItem('gzafchat_sound_effects') !== 'false';
+        let enterSendEnabled = localStorage.getItem('gzafchat_enter_send') !== 'false';
+        let typingDelayEnabled = localStorage.getItem('gzafchat_typing_delay') !== 'false';
+        let compactModeEnabled = localStorage.getItem('gzafchat_compact_mode') === 'true';
+        let lastSeenPrivacy = localStorage.getItem('gzafchat_privacy_last_seen') || 'everyone';
+        let disappearingMsgs = localStorage.getItem('gzafchat_disappearing') || 'off';
+
+        // База звонков
+        let callHistory = [];
+        try {
+            callHistory = JSON.parse(localStorage.getItem('gzafchat_call_history')) || [
+                { name: "Алиса Дизайнер", type: "video", incoming: true, missed: false, time: "Вчера, 18:40" },
+                { name: "Боб Разработчик", type: "audio", incoming: false, missed: false, time: "28 мая, 11:15" }
+            ];
+        } catch(e) {
+            callHistory = [];
+        }
+
+        // Мой личный статус
+        let myStatus = null;
+        try {
+            myStatus = JSON.parse(localStorage.getItem('gzafchat_my_status')) || null;
+        } catch(e) {
+            myStatus = null;
+        }
+
+        // Безопасное чтение текущих сессий
+        let currentUser = null;
+        try {
+            currentUser = JSON.parse(localStorage.getItem('gzafchat_current_user')) || null;
+        } catch (e) {
+            currentUser = null;
+        }
+
+        let userProfile = null;
+        try {
+            userProfile = JSON.parse(localStorage.getItem('gzafchat_profile')) || null;
+        } catch (e) {
+            userProfile = null;
+        }
+
+        let chats = defaultChats;
+        try {
+            chats = JSON.parse(localStorage.getItem('gzafchat_data')) || defaultChats;
+        } catch (e) {
+            chats = defaultChats;
+        }
+        
+        let activeChatId = null;
+        let isRecording = false;
+        let recordSeconds = 0;
+        let recordInterval = null;
+
+        // Переменные для звонков
+        let callTimer = null;
+        let callSecondsElapsed = 0;
+        let isCallActive = false;
+        let isMuted = false;
+        let isSpeaker = false;
+
+        // Веб-камера для видеовызовов
+        let localStream = null;
+        let isCameraOn = true;
+
+        let ringInterval = null;
+        let callAudioCtx = null;
+        let callOsc1 = null;
+        let callOsc2 = null;
+        let callGain = null;
+
+        // Безопасная инициализация базы зарегистрированных пользователей
+        let registeredUsers = [];
+        try {
+            registeredUsers = JSON.parse(localStorage.getItem('gzafchat_users')) || [];
+        } catch (e) {
+            registeredUsers = [];
+        }
+
+        // Гарантируем, что администратор всегда присутствует в базе
+        if (!Array.isArray(registeredUsers) || registeredUsers.length === 0 || !registeredUsers.some(u => u.username === 'admin')) {
+            registeredUsers = [...initialUsers, ...(Array.isArray(registeredUsers) ? registeredUsers.filter(u => u.username !== 'admin') : [])];
+            localStorage.setItem('gzafchat_users', JSON.stringify(registeredUsers));
+        }
+
+        // Загрузка телефонных контактов из хранилища
+        try {
+            let savedContacts = localStorage.getItem('gzafchat_phone_contacts');
+            if (savedContacts) {
+                mockPhoneContacts = JSON.parse(savedContacts);
+            } else {
+                localStorage.setItem('gzafchat_phone_contacts', JSON.stringify(mockPhoneContacts));
+            }
+        } catch(e) {}
+
+        // Вспомогательный хелпер для получения переведённых имён встроенных ботов
+        function getLocalizedName(chat) {
+            const dict = translations[currentLang];
+            if (chat.id === 1 || chat.name === "Алиса Дизайнер" || chat.name === "Alis Dizayner" || chat.name === "Alice Designer") {
+                return dict.nameAlice;
+            }
+            if (chat.id === 2 || chat.name === "Боб Разработчик" || chat.name === "Bob Tərtibatçı" || chat.name === "Bob Developer") {
+                return dict.nameBob;
+            }
+            if (chat.username === "admin" || chat.name === "Константин (Админ)" || chat.name === "Konstantin (Admin)" || chat.name === "Constantine (Admin)") {
+                return dict.nameAdmin;
+            }
+            return chat.name;
+        }
+
+        // Инициализация при запуске
+        function init() {
+            checkAuth();
+            applyLanguage();
+            applyAppTheme();
+            initEmojiPanel();
+            initEnterSendListener();
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        // Включение компактного стиля при сохранении
+        function applyAppTheme() {
+            if (currentTheme === 'light') {
+                document.body.classList.add('light-theme');
+            } else {
+                document.body.classList.remove('light-theme');
+            }
+
+            if (compactModeEnabled) {
+                document.body.classList.add('compact-mode');
+            } else {
+                document.body.classList.remove('compact-mode');
+            }
+        }
+
+        // Перехват отправки по Enter
+        function initEnterSendListener() {
+            const input = document.getElementById('messageInput');
+            if (!input) return;
+            
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    if (enterSendEnabled) {
+                        e.preventDefault();
+                        const submitBtn = document.querySelector('#messageForm button[type="submit"]');
+                        if (submitBtn) submitBtn.click();
+                    }
+                }
+            });
+        }
+
+        // СИСТЕМА ЛОКАЛИЗАЦИИ И ПЕРЕВОДА
+        function applyLanguage() {
+            const dict = translations[currentLang];
+            if (!dict) return;
+
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key]) {
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        el.placeholder = dict[key];
+                    } else if (el.tagName === 'BUTTON' && el.id === 'phoneContactsBtn') {
+                        el.title = dict[key];
+                    } else {
+                        el.innerText = dict[key];
+                    }
+                }
+            });
+
+            // Обновляем динамические плейсхолдеры
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) searchInput.placeholder = dict.searchPlaceholder;
+
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput) messageInput.placeholder = dict.messageInputPlaceholder;
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('gzafchat_lang', lang);
+            applyLanguage();
+            renderChats();
+            if (activeChatId) selectChat(activeChatId);
+        }
+
+        // Отрисовка динамической панели смайликов
+        function initEmojiPanel() {
+            const panel = document.getElementById('emojiPanel');
+            if (!panel) return;
+            panel.innerHTML = '';
+            
+            for (const [categoryName, emojis] of Object.entries(emojiCategories)) {
+                const catDiv = document.createElement('div');
+                catDiv.className = 'space-y-1';
+                catDiv.innerHTML = `
+                    <span class="text-[10px] uppercase font-bold text-slate-500 tracking-wider block mt-2">${categoryName}</span>
+                    <div class="grid grid-cols-8 gap-1.5 mt-1">
+                        ${emojis.map(emoji => `
+                            <button type="button" onclick="insertEmoji('${emoji}')" class="text-xl hover:scale-125 transition btn-anim w-8 h-8 flex items-center justify-center">${emoji}</button>
+                        `).join('')}
+                    </div>
+                `;
+                panel.appendChild(catDiv);
+            }
+        }
+
+        // --- КРАСИВОЕ УВЕДОМЛЕНИЕ (CUSTOM ALERT) ---
+        function showCustomAlert(titleKey, messageKey, callback, isRawText = false) {
+            const dict = translations[currentLang];
+            const title = isRawText ? titleKey : (dict[titleKey] || titleKey);
+            const msg = isRawText ? messageKey : (dict[messageKey] || messageKey);
+
+            document.getElementById('customAlertTitle').innerText = title;
+            document.getElementById('customAlertMsg').innerText = msg;
+            
+            const alertModal = document.getElementById('customAlert');
+            alertModal.classList.remove('hidden');
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+            
+            window.customAlertCallback = callback;
+        }
+
+        // Закрытие кастомного алерта
+        function closeCustomAlert() {
+            document.getElementById('customAlert').classList.add('hidden');
+            if (typeof window.customAlertCallback === 'function') {
+                window.customAlertCallback();
+                window.customAlertCallback = null;
+            }
+        }
+
+        // --- СИСТЕМА АВТОРИЗАЦИИ (ВХОД, РЕГИСТРАЦИЯ И ВОССТАНОВЛЕНИЕ) ---
+        function checkAuth() {
+            if (currentUser && userProfile) {
+                document.getElementById('authContainer').classList.add('hidden');
+                document.getElementById('appMainContainer').classList.remove('hidden');
+                applyProfile();
+                renderChats();
+            } else {
+                document.getElementById('authContainer').classList.remove('hidden');
+                document.getElementById('appMainContainer').classList.add('hidden');
+                switchAuthMode('login');
+            }
+        }
+
+        function switchAuthMode(mode) {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const forgotForm = document.getElementById('forgotForm');
+            const title = document.getElementById('authTitle');
+            const subtitle = document.getElementById('authSubtitle');
+            const dict = translations[currentLang];
+
+            if (mode === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+                forgotForm.classList.add('hidden');
+                title.innerText = dict.authTitle;
+                subtitle.innerText = dict.authSubtitle;
+            } else if (mode === 'register') {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+                forgotForm.classList.add('hidden');
+                title.innerText = dict.regTitle;
+                subtitle.innerText = dict.regSubtitle;
+            } else if (mode === 'forgot') {
+                loginForm.classList.add('hidden');
+                registerForm.classList.add('hidden');
+                forgotForm.classList.remove('hidden');
+                title.innerText = dict.forgotTitle;
+                subtitle.innerText = dict.forgotSubtitle;
+            }
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        let tempRegAvatar = defaultBlankAvatar;
+
+        function handleRegAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                tempRegAvatar = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('regUsername').value.trim().toLowerCase();
+            const displayNameInput = document.getElementById('regDisplayName').value.trim();
+            const passwordInput = document.getElementById('regPassword').value;
+            const phoneInput = document.getElementById('regPhone').value.trim();
+            const bioInput = document.getElementById('regBio').value.trim();
+
+            if (usernameInput.length < 3 || passwordInput.length < 4) {
+                showCustomAlert("Ошибка / Error", "usernameLengthError", null);
+                return;
+            }
+
+            try {
+                registeredUsers = JSON.parse(localStorage.getItem('gzafchat_users')) || initialUsers;
+            } catch (err) {
+                registeredUsers = initialUsers;
+            }
+
+            const exists = registeredUsers.some(u => u.username === usernameInput);
+            if (exists) {
+                showCustomAlert("Внимание / Warning", "usernameExistsError", null);
+                return;
+            }
+
+            const newUser = {
+                username: usernameInput,
+                password: passwordInput,
+                displayName: displayNameInput,
+                avatar: defaultBlankAvatar,
+                bio: bioInput || "Люблю кастомизацию in GzafChat!",
+                phone: phoneInput || ""
+            };
+
+            registeredUsers.push(newUser);
+            localStorage.setItem('gzafchat_users', JSON.stringify(registeredUsers));
+
+            showCustomAlert(
+                "regSuccessTitle", 
+                "regSuccessMsg", 
+                function() {
+                    switchAuthMode('login');
+                }
+            );
+            
+            document.getElementById('registerForm').reset();
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('loginUsername').value.trim().toLowerCase();
+            const passwordInput = document.getElementById('loginPassword').value;
+
+            try {
+                registeredUsers = JSON.parse(localStorage.getItem('gzafchat_users')) || initialUsers;
+            } catch (err) {
+                registeredUsers = initialUsers;
+            }
+
+            const user = registeredUsers.find(u => u.username === usernameInput && u.password === passwordInput);
+            if (!user) {
+                showCustomAlert("Ошибка входа / Error", "errorAuth", null);
+                return;
+            }
+
+            currentUser = user;
+            localStorage.setItem('gzafchat_current_user', JSON.stringify(currentUser));
+
+            userProfile = {
+                ...defaultProfileTemplate,
+                name: user.displayName,
+                avatar: user.avatar,
+                bio: user.bio,
+                phone: user.phone
+            };
+            localStorage.setItem('gzafchat_profile', JSON.stringify(userProfile));
+
+            try {
+                chats = JSON.parse(localStorage.getItem('gzafchat_data')) || defaultChats;
+            } catch (err) {
+                chats = defaultChats;
+            }
+            saveData();
+
+            checkAuth();
+            document.getElementById('loginForm').reset();
+        }
+
+        // ВОССТАНОВЛЕНИЕ ПАРОЛЯ
+        function handleForgotPassword(e) {
+            e.preventDefault();
+            const usernameInput = document.getElementById('forgotUsername').value.trim().toLowerCase();
+            const phoneInput = document.getElementById('forgotPhone').value.trim();
+            const newPasswordInput = document.getElementById('forgotNewPassword').value;
+
+            if (newPasswordInput.length < 4) {
+                showCustomAlert("Ошибка / Error", "usernameLengthError", null);
+                return;
+            }
+
+            try {
+                registeredUsers = JSON.parse(localStorage.getItem('gzafchat_users')) || initialUsers;
+            } catch (err) {
+                registeredUsers = initialUsers;
+            }
+
+            // Ищем пользователя с подходящим никнеймом и телефоном
+            const userIdx = registeredUsers.findIndex(u => u.username === usernameInput && u.phone === phoneInput);
+
+            if (userIdx === -1) {
+                showCustomAlert("Ошибка / Error", "forgotErrorMsg", null);
+                return;
+            }
+
+            // Обновляем пароль
+            registeredUsers[userIdx].password = newPasswordInput;
+            localStorage.setItem('gzafchat_users', JSON.stringify(registeredUsers));
+
+            // Если измененный юзер в этот момент залогинен, синхронизируем сессию
+            if (currentUser && currentUser.username === usernameInput) {
+                currentUser.password = newPasswordInput;
+                localStorage.setItem('gzafchat_current_user', JSON.stringify(currentUser));
+            }
+
+            showCustomAlert(
+                "forgotSuccessTitle", 
+                "forgotSuccessMsg", 
+                function() {
+                    switchAuthMode('login');
+                }
+            );
+
+            document.getElementById('forgotForm').reset();
+        }
+
+        function handleLogout() {
+            const dict = translations[currentLang];
+            if (confirm(dict.logoutConfirm)) {
+                localStorage.removeItem('gzafchat_current_user');
+                localStorage.removeItem('gzafchat_profile');
+                currentUser = null;
+                userProfile = null;
+                checkAuth();
+            }
+        }
+
+        function handleDirectAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const newAvatar = e.target.result;
+                
+                userProfile.avatar = newAvatar;
+                localStorage.setItem('gzafchat_profile', JSON.stringify(userProfile));
+
+                if (currentUser) {
+                    const idx = registeredUsers.findIndex(u => u.username === currentUser.username);
+                    if (idx !== -1) {
+                        registeredUsers[idx].avatar = newAvatar;
+                        localStorage.setItem('gzafchat_users', JSON.stringify(registeredUsers));
+                    }
+                    currentUser.avatar = newAvatar;
+                    localStorage.setItem('gzafchat_current_user', JSON.stringify(currentUser));
+                }
+
+                applyProfile();
+                
+                const modalImg = document.getElementById('infoModalAvatar');
+                if (modalImg) modalImg.src = newAvatar;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- ЛОГИКА ТАБОВ (ЧАТЫ, СТАТУСЫ, ЗВОНКИ) ---
+        function switchTab(tabName) {
+            const tabs = ['chats', 'statuses', 'calls'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tabBtn-${t}`);
+                const content = document.getElementById(`tabContent-${t}`);
+                if (t === tabName) {
+                    btn.classList.add('text-indigo-500', 'border-indigo-500');
+                    btn.classList.remove('text-slate-400', 'border-transparent');
+                    content.classList.remove('hidden');
+                } else {
+                    btn.classList.remove('text-indigo-500', 'border-indigo-500');
+                    btn.classList.add('text-slate-400', 'border-transparent');
+                    content.classList.add('hidden');
+                }
+            });
+
+            if (tabName === 'statuses') {
+                renderStatuses();
+            } else if (tabName === 'calls') {
+                renderCallHistory();
+            }
+            try { lucide.createIcons(); } catch(e) {}
+        }
+
+        // --- ЛОГИКА СТАТУСОВ (ИСТОРИЙ) ---
+        function handleAddStatus(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const statusText = prompt(currentLang === 'ru' ? "Введите описание для вашей истории (необязательно):" : (currentLang === 'az' ? "Hekayəniz üçün qısa təsvir yazın (isteğe bağlı):" : "Enter status caption (optional):")) || "";
+                myStatus = {
+                    media: e.target.result,
+                    time: getCurrentTime(),
+                    text: statusText
+                };
+                localStorage.setItem('gzafchat_my_status', JSON.stringify(myStatus));
+                renderStatuses();
+                showCustomAlert("successAlertTitle", "statusAddedAlert");
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderStatuses() {
+            const myStatusTimeEl = document.getElementById('myStatusTime');
+            const myStatusAvatarEl = document.getElementById('myStatusAvatar');
+            const container = document.getElementById('recentStatusesContainer');
+            const dict = translations[currentLang];
+
+            const myStatusPreviewText = document.getElementById('myStatusPreviewText');
+            const myStatusPreviewImgContainer = document.getElementById('myStatusPreviewImgContainer');
+            const myStatusPreviewImg = document.getElementById('myStatusPreviewImg');
+
+            if (userProfile) {
+                myStatusAvatarEl.src = userProfile.avatar;
+            }
+
+            if (myStatus) {
+                myStatusTimeEl.innerText = `${dict.myStatusLabel} • ${myStatus.time}`;
+                if (myStatus.text) {
+                    myStatusPreviewText.innerText = myStatus.text;
+                    myStatusPreviewText.classList.remove('hidden');
+                } else {
+                    myStatusPreviewText.classList.add('hidden');
+                }
+                if (myStatus.media) {
+                    myStatusPreviewImg.src = myStatus.media;
+                    myStatusPreviewImgContainer.classList.remove('hidden');
+                } else {
+                    myStatusPreviewImgContainer.classList.add('hidden');
+                }
+            } else {
+                myStatusTimeEl.innerText = dict.noStatusYet;
+                myStatusPreviewText.classList.add('hidden');
+                myStatusPreviewImgContainer.classList.add('hidden');
+            }
+
+            if (!container) return;
+            container.innerHTML = '';
+
+            mockStatuses.forEach(st => {
+                const dispName = (st.id === 101) ? dict.nameAlice : ((st.id === 102) ? dict.nameBob : st.name);
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between p-2.5 bg-slate-950/40 border border-slate-800/50 rounded-xl cursor-pointer hover:bg-slate-900/40 transition';
+                row.onclick = () => viewStatus(dispName, st.avatar, st.media, st.text, st.time);
+                row.innerHTML = `
+                    <div class="flex items-center space-x-3 overflow-hidden flex-1">
+                        <div class="relative flex-shrink-0">
+                            <img src="${st.avatar}" class="w-11 h-11 rounded-full object-cover border-2 border-indigo-500 p-0.5 bg-slate-900">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-bold text-xs text-slate-200 truncate">${dispName}</h4>
+                            <p class="text-[10px] text-slate-400 truncate">${st.time}</p>
+                            ${st.text ? `<p class="text-[11px] text-slate-400 italic truncate mt-0.5">${st.text}</p>` : ''}
+                        </div>
+                    </div>
+                    ${st.media ? `
+                        <div class="w-10 h-10 ml-2 rounded-lg overflow-hidden border border-slate-800/80 flex-shrink-0">
+                            <img src="${st.media}" class="w-full h-full object-cover filter brightness-75 hover:brightness-100 transition">
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function viewMyStatus() {
+            if (myStatus) {
+                viewStatus(userProfile.name, userProfile.avatar, myStatus.media, myStatus.text, myStatus.time);
+            } else {
+                document.getElementById('statusFileInput').click();
+            }
+        }
+
+        let statusProgressInterval = null;
+        function viewStatus(name, avatar, media, text, time) {
+            const overlay = document.getElementById('statusViewerOverlay');
+            document.getElementById('statusViewerAvatar').src = avatar;
+            document.getElementById('statusViewerName').innerText = name;
+            document.getElementById('statusViewerTime').innerText = time;
+            document.getElementById('statusViewerImage').src = media;
+            document.getElementById('statusViewerText').innerText = text || "";
+
+            overlay.classList.remove('hidden');
+
+            const progressBar = document.getElementById('statusProgressBar');
+            progressBar.style.width = '0%';
+
+            let progress = 0;
+            clearInterval(statusProgressInterval);
+            statusProgressInterval = setInterval(() => {
+                progress += 2;
+                progressBar.style.width = `${progress}%`;
+                if (progress >= 100) {
+                    closeStatusViewer();
+                }
+            }, 100);
+        }
+
+        function closeStatusViewer() {
+            clearInterval(statusProgressInterval);
+            document.getElementById('statusViewerOverlay').classList.add('hidden');
+        }
+
+        // --- ЛОГИКА ЖУРНАЛА ЗВОНКОВ ---
+        function addCallHistory(name, type, incoming, missed) {
+            const log = {
+                name: name,
+                type: type,
+                incoming: incoming,
+                missed: missed,
+                time: `${getCurrentDateString()}, ${getCurrentTime()}`
+            };
+            callHistory.unshift(log);
+            localStorage.setItem('gzafchat_call_history', JSON.stringify(callHistory));
+            renderCallHistory();
+        }
+
+        function getCurrentDateString() {
+            const date = new Date();
+            const months = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+            return `${date.getDate()} ${months[date.getMonth()]}`;
+        }
+
+        function clearCallHistory() {
+            callHistory = [];
+            localStorage.setItem('gzafchat_call_history', JSON.stringify(callHistory));
+            renderCallHistory();
+            showCustomAlert("successAlertTitle", "callHistoryCleared");
+        }
+
+        function renderCallHistory() {
+            const container = document.getElementById('callHistoryContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            const dict = translations[currentLang];
+
+            if (callHistory.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">${dict.noCalls}</p>`;
+                return;
+            }
+
+            callHistory.forEach(log => {
+                let callIcon = log.type === 'video' ? 'video' : 'phone';
+                let arrowIcon = 'arrow-down-left';
+                let colorClass = 'text-emerald-400';
+                let statusText = dict.callIncoming;
+
+                if (log.missed) {
+                    colorClass = 'text-red-500';
+                    statusText = dict.callMissed;
+                } else if (!log.incoming) {
+                    arrowIcon = 'arrow-up-right';
+                    colorClass = 'text-slate-400';
+                    statusText = dict.callOutgoing;
+                }
+
+                // Локализация имени в истории
+                let dispName = log.name;
+                if (log.name === "Алиса Дизайнер" || log.name === "Alis Dizayner" || log.name === "Alice Designer") {
+                    dispName = dict.nameAlice;
+                } else if (log.name === "Боб Разработчик" || log.name === "Bob Tərtibatçı" || log.name === "Bob Developer") {
+                    dispName = dict.nameBob;
+                }
+
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between p-3 bg-slate-900/40 border border-slate-800/60 rounded-2xl hover:border-indigo-500/30 transition duration-150';
+                row.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-300">
+                            <i data-lucide="${callIcon}" class="w-4.5 h-4.5"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-200 text-xs">${dispName}</h4>
+                            <div class="flex items-center space-x-1 mt-0.5">
+                                <i data-lucide="${arrowIcon}" class="w-3.5 h-3.5 ${colorClass}"></i>
+                                <span class="text-[10px] text-slate-500">${log.time} • ${statusText}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="startDirectCall('${dispName}', '${log.type}')" class="p-2 hover:bg-slate-800 rounded-full text-indigo-400 hover:text-indigo-300 transition btn-anim">
+                        <i data-lucide="${callIcon}" class="w-4 h-4"></i>
+                    </button>
+                `;
+                container.appendChild(row);
+            });
+            try { lucide.createIcons(); } catch(e) {}
+        }
+
+        function startDirectCall(name, type) {
+            // Находим контакт по имени в чатах с поддержкой перевода
+            const targetChat = chats.find(c => getLocalizedName(c) === name || c.name === name);
+            if (targetChat) {
+                selectChat(targetChat.id);
+                if (type === 'video') startVideoCall();
+                else startAudioCall();
+            } else {
+                showCustomAlert("Внимание", "Контакт не найден в списке активных чатов.", null, true);
+            }
+        }
+
+        // --- СОЗДАНИЕ ГРУППЫ ---
+        function toggleGroupModal() {
+            const modal = document.getElementById('groupModal');
+            modal.classList.toggle('hidden');
+            const dict = translations[currentLang];
+            
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('groupNameInput').value = '';
+                const listContainer = document.getElementById('groupMembersList');
+                listContainer.innerHTML = '';
+                
+                const individualContacts = chats.filter(c => !c.isGroup);
+                
+                if (individualContacts.length === 0) {
+                    listContainer.innerHTML = `<p class="text-xs text-slate-500 text-center py-4">${dict.noContacts}</p>`;
+                    return;
+                }
+                
+                individualContacts.forEach(contact => {
+                    const dispName = getLocalizedName(contact);
+                    const row = document.createElement('label');
+                    row.className = 'flex items-center justify-between p-2 hover:bg-slate-855/60 rounded-lg cursor-pointer transition';
+                    row.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <img src="${contact.avatar}" class="w-8 h-8 rounded-full object-cover">
+                            <span class="text-xs font-medium text-slate-200">${dispName}</span>
+                        </div>
+                        <input type="checkbox" name="groupMemberCheckbox" value="${contact.id}" class="w-4 h-4 rounded border-slate-800 text-indigo-600 focus:ring-indigo-500 bg-slate-950">
+                    `;
+                    listContainer.appendChild(row);
+                });
+            }
+            try {
+                lucide.createIcons();
+            } catch(e) {}
+        }
+
+        function createGroup() {
+            const groupName = document.getElementById('groupNameInput').value.trim();
+            const dict = translations[currentLang];
+            if (!groupName) {
+                alert(dict.enterGroupName);
+                return;
+            }
+            
+            const checkedBoxes = document.querySelectorAll('input[name="groupMemberCheckbox"]:checked');
+            if (checkedBoxes.length === 0) {
+                alert(dict.selectOneMember);
+                return;
+            }
+            
+            const selectedContactIds = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+            const newGroupId = Date.now();
+            
+            const newGroup = {
+                id: newGroupId,
+                name: groupName,
+                isGroup: true,
+                avatar: `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/></svg>`,
+                status: "групповой чат",
+                bio: `Групповой чат "${groupName}". Создан пользователем ${userProfile.name}.`,
+                phone: "Групповой чат",
+                messages: [
+                    { id: Date.now(), text: dict.systemGroupCreated.replace('{groupName}', groupName), sender: 'system', type: 'text', timestamp: getCurrentTime() }
+                ],
+                unread: 0,
+                botReplies: [
+                    "Интересный вопрос!",
+                    "Отличный план, команда.",
+                    "Я согласен с этим мнением.",
+                    "Давайте обсудим это подробнее."
+                ]
+            };
+            
+            chats.unshift(newGroup);
+            saveData();
+            toggleGroupModal();
+            selectChat(newGroupId);
+            
+            showCustomAlert("groupCreatedMsg", dict.systemGroupCreated.replace('{groupName}', groupName));
+        }
+
+        // --- МОДАЛЬНОЕ ОКНО ТЕЛЕФОННЫХ КОНТАКТОВ ---
+        async function togglePhoneContactsModal() {
+            const modal = document.getElementById('phoneContactsModal');
+            const list = document.getElementById('phoneContactsList');
+            const dict = translations[currentLang];
+            
+            const isContactsAPISupported = ('contacts' in navigator && 'ContactsManager' in window);
+            
+            if (isContactsAPISupported) {
+                try {
+                    const props = ['name', 'tel'];
+                    const opts = { multiple: true };
+                    const realContacts = await navigator.contacts.select(props, opts);
+                    
+                    if (realContacts && realContacts.length > 0) {
+                        modal.classList.remove('hidden');
+                        list.innerHTML = '';
+                        
+                        realContacts.forEach(contact => {
+                            const name = contact.name ? contact.name[0] : 'No Name';
+                            const phone = contact.tel ? contact.tel[0] : 'No Phone';
+                            const initial = name ? name[0].toUpperCase() : '?';
+                            
+                            const row = document.createElement('div');
+                            row.className = 'flex items-center justify-between p-3 bg-slate-900 border border-slate-800/80 rounded-xl hover:border-indigo-500/50 transition duration-150';
+                            row.innerHTML = `
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold border border-indigo-500/30 text-sm">
+                                        ${initial}
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-slate-200 text-xs">${name}</h4>
+                                        <p class="text-[10px] text-slate-400 font-mono mt-0.5">${phone}</p>
+                                    </div>
+                                </div>
+                                <button onclick="inviteContact('${name.replace(/'/g, "\\'")}', '${phone}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg transition btn-anim uppercase tracking-wider">
+                                    ${dict.inviteBtn}
+                                </button>
+                            `;
+                            list.appendChild(row);
+                        });
+                        try { lucide.createIcons(); } catch(e) {}
+                        return;
+                    }
+                } catch (err) {
+                    console.warn("Доступ к книге контактов отклонен или не поддерживается:", err);
+                }
+            }
+            
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                renderFallbackContacts();
+            }
+        }
+
+        function renderFallbackContacts() {
+            const list = document.getElementById('phoneContactsList');
+            const dict = translations[currentLang];
+            list.innerHTML = '';
+            
+            if (mockPhoneContacts.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-8 px-4">
+                        <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 mx-auto mb-3">
+                            <i data-lucide="users-round" class="w-6 h-6"></i>
+                        </div>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            Ваш браузер не поддерживает прямое чтение контактов устройства, либо доступ к ним заблокирован. 
+                            Вы можете экспортировать контакты на телефоне в файл <b>.vcf</b> и загрузить его выше, либо добавить контакты вручную.
+                        </p>
+                    </div>
+                `;
+                try { lucide.createIcons(); } catch(e) {}
+                return;
+            }
+            
+            mockPhoneContacts.forEach((contact, idx) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between p-3 bg-slate-900 border border-slate-800/80 rounded-xl hover:border-indigo-500/50 transition duration-150';
+                row.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <img src="${contact.avatar || defaultBlankAvatar}" class="w-10 h-10 rounded-full object-cover border border-slate-850">
+                        <div>
+                            <h4 class="font-bold text-slate-200 text-xs">${contact.name}</h4>
+                            <p class="text-[10px] text-slate-400 font-mono mt-0.5">${contact.phone}</p>
+                        </div>
+                    </div>
+                    <button onclick="inviteContact('${contact.name.replace(/'/g, "\\'")}', '${contact.phone}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg transition btn-anim uppercase tracking-wider">
+                        ${dict.inviteBtn}
+                    </button>
+                `;
+                list.appendChild(row);
+            });
+            try { lucide.createIcons(); } catch(e) {}
+        }
+
+        // --- ИМПОРТ ФАЙЛА КОНТАКТОВ (.VCF) ---
+        function handleVCFImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const imported = parseVCF(text);
+                if (imported.length > 0) {
+                    mockPhoneContacts = [...imported, ...mockPhoneContacts];
+                    localStorage.setItem('gzafchat_phone_contacts', JSON.stringify(mockPhoneContacts));
+                    renderFallbackContacts();
+                    showCustomAlert("Успешно", `Импортировано контактов: ${imported.length}`, null, true);
+                } else {
+                    showCustomAlert("Внимание", "Не удалось обнаружить валидные контакты в этом .vcf файле.", null, true);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function parseVCF(vcfText) {
+            const contacts = [];
+            const lines = vcfText.split(/\r?\n/);
+            let currentContact = {};
+            for (let line of lines) {
+                line = line.trim();
+                if (line === "BEGIN:VCARD") {
+                    currentContact = {};
+                } else if (line === "END:VCARD") {
+                    if (currentContact.name && currentContact.phone) {
+                        contacts.push({
+                            name: currentContact.name,
+                            phone: currentContact.phone,
+                            avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>"
+                        });
+                    }
+                } else if (line.startsWith("FN:")) {
+                    currentContact.name = line.substring(3).trim();
+                } else if (line.startsWith("TEL")) {
+                    const colonIdx = line.indexOf(":");
+                    if (colonIdx !== -1) {
+                        currentContact.phone = line.substring(colonIdx + 1).trim();
+                    }
+                }
+            }
+            return contacts;
+        }
+
+        function addManualContact() {
+            const nameInput = document.getElementById('manualContactName');
+            const phoneInput = document.getElementById('manualContactPhone');
+            const name = nameInput.value.trim();
+            const phone = phoneInput.value.trim();
+
+            if (!name || !phone) {
+                alert("Заполните имя и номер телефона!");
+                return;
+            }
+
+            const newContact = {
+                name: name,
+                phone: phone,
+                avatar: defaultBlankAvatar
+            };
+
+            mockPhoneContacts.unshift(newContact);
+            localStorage.setItem('gzafchat_phone_contacts', JSON.stringify(mockPhoneContacts));
+            
+            nameInput.value = '';
+            phoneInput.value = '';
+            renderFallbackContacts();
+        }
+
+        function inviteContact(name, phone) {
+            const dict = translations[currentLang];
+            const msg = dict.invitationSentMsg.replace('{phone}', phone);
+            showCustomAlert("invitationSentTitle", msg, null, true);
+        }
+
+        // --- ГЕНЕРАЦИЯ ЗВУКОВ ЧЕРЕЗ WEB AUDIO API ---
+        function playSentSound() {
+            if (!soundEffectsEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) {}
+        }
+
+        function playReceivedSound() {
+            if (!soundEffectsEnabled) return;
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(783.99, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(523.25, ctx.currentTime + 0.18);
+                gain.gain.setValueAtTime(0.10, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.2);
+            } catch (e) {}
+        }
+
+        function startRingingSound() {
+            try {
+                callAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                function playSingleRing() {
+                    if (!callAudioCtx || callAudioCtx.state === 'closed') return;
+                    
+                    callOsc1 = callAudioCtx.createOscillator();
+                    callOsc2 = callAudioCtx.createOscillator();
+                    callGain = callAudioCtx.createGain();
+                    
+                    callOsc1.type = 'sine';
+                    callOsc1.frequency.setValueAtTime(400, callAudioCtx.currentTime);
+                    callOsc2.type = 'sine';
+                    callOsc2.frequency.setValueAtTime(450, callAudioCtx.currentTime);
+                    
+                    callGain.gain.setValueAtTime(0, callAudioCtx.currentTime);
+                    callGain.gain.linearRampToValueAtTime(0.07, callAudioCtx.currentTime + 0.1);
+                    callGain.gain.setValueAtTime(0.07, callAudioCtx.currentTime + 1.2);
+                    callGain.gain.exponentialRampToValueAtTime(0.001, callAudioCtx.currentTime + 1.4);
+                    
+                    callOsc1.connect(callGain);
+                    callOsc2.connect(callGain);
+                    callGain.connect(callAudioCtx.destination);
+                    
+                    callOsc1.start();
+                    callOsc2.start();
+                    
+                    setTimeout(() => {
+                        try {
+                            if (callOsc1) callOsc1.stop();
+                            if (callOsc2) callOsc2.stop();
+                        } catch(e){}
+                    }, 1400);
+                }
+                
+                playSingleRing();
+                ringInterval = setInterval(playSingleRing, 4000);
+            } catch (e) {}
+        }
+
+        function stopRingingSound() {
+            if (ringInterval) {
+                clearInterval(ringInterval);
+                ringInterval = null;
+            }
+            try {
+                if (callOsc1) { callOsc1.stop(); callOsc1 = null; }
+                if (callOsc2) { callOsc2.stop(); callOsc2 = null; }
+            } catch(e){}
+        }
+
+        function playAnswerSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, ctx.currentTime);
+                osc.frequency.setValueAtTime(800, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch(e){}
+        }
+
+        // --- ЛОГИКА АУДИОЗВОНКОВ (СИМУЛЯЦИЯ) ---
+        function startAudioCall() {
+            const chat = chats.find(c => c.id === activeChatId);
+            if (!chat) return;
+
+            addCallHistory(chat.name, 'audio', false, false);
+
+            document.getElementById('callContactName').innerText = getLocalizedName(chat);
+            document.getElementById('callContactAvatar').src = chat.avatar;
+            
+            const dict = translations[currentLang];
+            document.getElementById('callState').innerText = dict.videoCallStateCalling;
+            document.getElementById('callPulseRing').classList.add('animate-ping');
+            
+            document.getElementById('callOverlay').classList.remove('hidden');
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+
+            isCallActive = true;
+            callSecondsElapsed = 0;
+
+            startRingingSound();
+
+            setTimeout(() => {
+                if (!isCallActive) return;
+                stopRingingSound();
+                playAnswerSound();
+                
+                document.getElementById('callState').innerText = "00:00";
+                
+                callTimer = setInterval(() => {
+                    callSecondsElapsed++;
+                    const mins = Math.floor(callSecondsElapsed / 60);
+                    const secs = callSecondsElapsed % 60;
+                    document.getElementById('callState').innerText = 
+                        `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                }, 1000);
+            }, 4000);
+        }
+
+        function endAudioCall() {
+            isCallActive = false;
+            stopRingingSound();
+            if (callTimer) {
+                clearInterval(callTimer);
+                callTimer = null;
+            }
+            document.getElementById('callOverlay').classList.add('hidden');
+        }
+
+
+        // --- ЛОГИКА ИНТЕРАКТИВНОГО ВИДЕОЗВОНКА ---
+        async function startVideoCall() {
+            const chat = chats.find(c => c.id === activeChatId);
+            if (!chat) return;
+
+            addCallHistory(chat.name, 'video', false, false);
+
+            const dict = translations[currentLang];
+            document.getElementById('videoCallContactName').innerText = getLocalizedName(chat);
+            document.getElementById('videoCallRemoteAvatar').src = chat.avatar;
+            document.getElementById('videoCallState').innerText = dict.videoCallStateConnecting;
+            
+            document.getElementById('videoCallRemotePlaceholder').classList.add('hidden');
+            document.getElementById('videoCallRemoteCalling').classList.remove('hidden');
+            document.getElementById('localVideo').classList.add('hidden');
+            document.getElementById('localVideoSimulated').classList.add('hidden');
+            document.getElementById('localVideoPlaceholder').classList.add('hidden');
+
+            document.getElementById('videoCallOverlay').classList.remove('hidden');
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+
+            isCallActive = true;
+            isCameraOn = true;
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                runCameraSimulation();
+            } else {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                    const localVideoElement = document.getElementById('localVideo');
+                    localVideoElement.srcObject = localStream;
+                    localVideoElement.classList.remove('hidden');
+                } catch (err) {
+                    try {
+                        localStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                        const localVideoElement = document.getElementById('localVideo');
+                        localVideoElement.srcObject = localStream;
+                        localVideoElement.classList.remove('hidden');
+                    } catch (err2) {
+                        console.warn("Камера не найдена. Активирована интерактивная симуляция потока.");
+                        runCameraSimulation();
+                    }
+                }
+            }
+
+            startRingingSound();
+            document.getElementById('videoCallState').innerText = dict.videoCallStateCalling;
+
+            setTimeout(() => {
+                if (!isCallActive) return;
+                stopRingingSound();
+                playAnswerSound();
+                
+                document.getElementById('videoCallState').innerText = dict.videoCallStateActive;
+                document.getElementById('videoCallRemoteCalling').classList.add('hidden');
+                document.getElementById('videoCallRemotePlaceholder').classList.remove('hidden');
+            }, 3000);
+        }
+
+        function runCameraSimulation() {
+            document.getElementById('localVideo').classList.add('hidden');
+            document.getElementById('localVideoPlaceholder').classList.add('hidden');
+            document.getElementById('localVideoSimulated').classList.remove('hidden');
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        function toggleVideoCallCamera() {
+            isCameraOn = !isCameraOn;
+            
+            if (localStream) {
+                localStream.getVideoTracks().forEach(track => track.enabled = isCameraOn);
+            }
+
+            const btn = document.getElementById('videoCallCameraBtn');
+            const videoEl = document.getElementById('localVideo');
+            const placeholder = document.getElementById('localVideoPlaceholder');
+            const simulatedEl = document.getElementById('localVideoSimulated');
+
+            if (isCameraOn) {
+                btn.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+                btn.classList.remove('bg-slate-800', 'hover:bg-slate-700', 'text-red-400');
+                btn.innerHTML = '<i data-lucide="video" class="w-5 h-5"></i>';
+                
+                if (localStream) {
+                    videoEl.classList.remove('hidden');
+                    simulatedEl.classList.add('hidden');
+                } else {
+                    simulatedEl.classList.remove('hidden');
+                }
+                placeholder.classList.add('hidden');
+            } else {
+                btn.classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
+                btn.classList.add('bg-slate-800', 'hover:bg-slate-700', 'text-red-400');
+                btn.innerHTML = '<i data-lucide="video-off" class="w-5 h-5"></i>';
+                
+                videoEl.classList.add('hidden');
+                simulatedEl.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        function endVideoCall() {
+            isCallActive = false;
+            stopRingingSound();
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            const localVideoElement = document.getElementById('localVideo');
+            if (localVideoElement) localVideoElement.srcObject = null;
+
+            document.getElementById('localVideoSimulated').classList.add('hidden');
+            document.getElementById('localVideo').classList.add('hidden');
+            document.getElementById('localVideoPlaceholder').classList.add('hidden');
+
+            document.getElementById('videoCallOverlay').classList.add('hidden');
+        }
+
+        function toggleCallMute() {
+            isMuted = !isMuted;
+            const audioBtn = document.getElementById('callMuteBtn');
+            const videoBtn = document.getElementById('videoCallMuteBtn');
+
+            const styleMute = (btn) => {
+                if (isMuted) {
+                    btn.classList.remove('bg-slate-800', 'hover:bg-slate-700');
+                    btn.classList.add('bg-red-500/20', 'text-red-500', 'hover:bg-red-500/30');
+                    btn.innerHTML = '<i data-lucide="mic" class="w-5 h-5"></i>';
+                } else {
+                    btn.classList.add('bg-slate-800', 'hover:bg-slate-700');
+                    btn.classList.remove('bg-red-500/20', 'text-red-500', 'hover:bg-red-500/30');
+                    btn.innerHTML = '<i data-lucide="mic-off" class="w-5 h-5"></i>';
+                }
+            };
+            if (audioBtn) styleMute(audioBtn);
+            if (videoBtn) styleMute(videoBtn);
+            
+            if (localStream) {
+                localStream.getAudioTracks().forEach(track => track.enabled = !isMuted);
+            }
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        // Применение настроек профиля и кастомных цветов
+        function applyProfile() {
+            if (!userProfile) return;
+            document.getElementById('myProfileName').innerText = userProfile.name;
+            document.getElementById('myProfileAvatar').src = userProfile.avatar;
+
+            const container = document.getElementById('messagesContainer');
+            if (container) {
+                container.style.backgroundColor = userProfile.chatBgColor || '#020617';
+            }
+        }
+
+        // Открытие / Закрытие настроек
+        function toggleSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            modal.classList.toggle('hidden');
+            
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('settingsProfileName').value = userProfile.name;
+                document.getElementById('settingsProfileBio').value = userProfile.bio || "";
+                document.getElementById('settingsProfilePhone').value = userProfile.phone || "";
+                document.getElementById('settingsProfilePic').src = userProfile.avatar;
+                
+                document.getElementById('settingsLang').value = currentLang;
+                document.getElementById('settingsTheme').value = currentTheme;
+
+                document.getElementById('settingsBgColor').value = userProfile.chatBgColor || "#020617";
+                document.getElementById('settingsMyBubbleColor').value = userProfile.myBubbleColor || "#4f46e5";
+                document.getElementById('settingsMyTextColor').value = userProfile.myTextColor || "#ffffff";
+                document.getElementById('settingsTheirBubbleColor').value = userProfile.theirBubbleColor || "#1e293b";
+                document.getElementById('settingsTheirTextColor').value = userProfile.theirTextColor || "#f1f5f9";
+
+                // Установка новых полей из правого угла
+                document.getElementById('settingsSoundEffects').checked = soundEffectsEnabled;
+                document.getElementById('settingsEnterSend').checked = enterSendEnabled;
+                document.getElementById('settingsTypingDelay').checked = typingDelayEnabled;
+                document.getElementById('settingsCompactMode').checked = compactModeEnabled;
+                document.getElementById('settingsPrivacyLastSeen').value = lastSeenPrivacy;
+                document.getElementById('settingsDisappearing').value = disappearingMsgs;
+            }
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        // Сохранение кастомных настроек дизайна в localStorage
+        function saveSettings() {
+            userProfile.name = document.getElementById('settingsProfileName').value.trim() || "Пользователь";
+            userProfile.bio = document.getElementById('settingsProfileBio').value.trim() || "";
+            userProfile.phone = document.getElementById('settingsProfilePhone').value.trim() || "";
+            
+            currentLang = document.getElementById('settingsLang').value;
+            localStorage.setItem('gzafchat_lang', currentLang);
+            applyLanguage();
+
+            currentTheme = document.getElementById('settingsTheme').value;
+            localStorage.setItem('gzafchat_theme', currentTheme);
+
+            userProfile.chatBgColor = document.getElementById('settingsBgColor').value;
+            userProfile.myBubbleColor = document.getElementById('settingsMyBubbleColor').value;
+            userProfile.myTextColor = document.getElementById('settingsMyTextColor').value;
+            userProfile.theirBubbleColor = document.getElementById('settingsTheirBubbleColor').value;
+            userProfile.theirTextColor = document.getElementById('settingsTheirTextColor').value;
+            
+            // Сохранение новых параметров
+            soundEffectsEnabled = document.getElementById('settingsSoundEffects').checked;
+            localStorage.setItem('gzafchat_sound_effects', soundEffectsEnabled);
+
+            enterSendEnabled = document.getElementById('settingsEnterSend').checked;
+            localStorage.setItem('gzafchat_enter_send', enterSendEnabled);
+
+            typingDelayEnabled = document.getElementById('settingsTypingDelay').checked;
+            localStorage.setItem('gzafchat_typing_delay', typingDelayEnabled);
+
+            compactModeEnabled = document.getElementById('settingsCompactMode').checked;
+            localStorage.setItem('gzafchat_compact_mode', compactModeEnabled);
+
+            lastSeenPrivacy = document.getElementById('settingsPrivacyLastSeen').value;
+            localStorage.setItem('gzafchat_privacy_last_seen', lastSeenPrivacy);
+
+            disappearingMsgs = document.getElementById('settingsDisappearing').value;
+            localStorage.setItem('gzafchat_disappearing', disappearingMsgs);
+
+            localStorage.setItem('gzafchat_profile', JSON.stringify(userProfile));
+            
+            if (currentUser) {
+                const idx = registeredUsers.findIndex(u => u.username === currentUser.username);
+                if (idx !== -1) {
+                    registeredUsers[idx].displayName = userProfile.name;
+                    registeredUsers[idx].avatar = userProfile.avatar;
+                    registeredUsers[idx].bio = userProfile.bio;
+                    registeredUsers[idx].phone = userProfile.phone;
+                    localStorage.setItem('gzafchat_users', JSON.stringify(registeredUsers));
+                }
+            }
+
+            // Корректируем отображение в реальном времени
+            const myStatusLabel = document.getElementById('myProfileStatusLabel');
+            if (myStatusLabel) {
+                const dict = translations[currentLang];
+                if (lastSeenPrivacy === 'nobody') {
+                    myStatusLabel.innerHTML = '';
+                } else {
+                    myStatusLabel.innerHTML = `<span class="w-1.5 h-1.5 bg-emerald-500 rounded-full status-ripple"></span> <span>${dict.onlineStatus}</span>`;
+                }
+            }
+
+            applyAppTheme();
+            applyProfile();
+            renderMessages();
+            renderChats();
+            toggleSettingsModal();
+        }
+
+        // Открытие модального окна информации о профиле (С ПОЛНЫМ ПЕРЕВОДОМ)
+        function openProfileInfo(event, type, contactId = null) {
+            if (event) event.stopPropagation();
+
+            const modal = document.getElementById('profileInfoModal');
+            const avatarImg = document.getElementById('infoModalAvatar');
+            const nameText = document.getElementById('infoModalName');
+            const statusText = document.getElementById('infoModalStatus');
+            const bioText = document.getElementById('infoModalBio');
+            const phoneText = document.getElementById('infoModalPhone');
+
+            const avatarContainer = document.getElementById('infoModalAvatarContainer');
+            const avatarHover = document.getElementById('infoModalAvatarHover');
+            const dict = translations[currentLang];
+
+            if (type === 'me') {
+                avatarImg.src = userProfile.avatar;
+                nameText.innerText = getLocalizedName({ username: currentUser ? currentUser.username : "admin", name: userProfile.name });
+                statusText.innerText = lastSeenPrivacy === 'nobody' ? '' : `${dict.onlineStatus} (${dict.appName})`;
+                
+                // Перевод стандартного Bio админа
+                let bioVal = userProfile.bio;
+                if (currentUser && currentUser.username === 'admin' && (userProfile.bio === initialUsers[0].bio || userProfile.bio === "")) {
+                    bioVal = dict.bioAdmin;
+                }
+                bioText.innerText = bioVal;
+                phoneText.innerText = userProfile.phone || "";
+
+                avatarContainer.style.cursor = 'pointer';
+                if (avatarHover) avatarHover.classList.remove('hidden');
+                avatarContainer.onclick = function() {
+                    document.getElementById('directAvatarInput').click();
+                };
+            } else {
+                const lookupId = contactId || activeChatId;
+                const chat = chats.find(c => String(c.id) === String(lookupId));
+                if (!chat) return;
+                avatarImg.src = chat.avatar;
+                nameText.innerText = getLocalizedName(chat);
+
+                // Перевод статуса контакта
+                let localizedStatus = chat.status;
+                if (chat.status === "в сети") localizedStatus = dict.onlineStatus;
+                else if (chat.status === "был(а) недавно") localizedStatus = dict.offlineStatus;
+                else if (chat.status === "групповой чат") localizedStatus = dict.groupChatStatus;
+                statusText.innerText = localizedStatus;
+
+                // Перевод описаний Bio встроенных персонажей
+                let bioVal = chat.bio || "";
+                if (chat.id === 1) bioVal = dict.bioAlice;
+                else if (chat.id === 2) bioVal = dict.bioBob;
+                bioText.innerText = bioVal;
+                phoneText.innerText = chat.phone || "";
+
+                avatarContainer.style.cursor = 'default';
+                if (avatarHover) avatarHover.classList.add('hidden');
+                avatarContainer.onclick = null;
+            }
+
+            modal.classList.remove('hidden');
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        function toggleProfileInfoModal() {
+            document.getElementById('profileInfoModal').classList.add('hidden');
+        }
+
+        function handleProfilePicUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('settingsProfilePic').src = e.target.result;
+                userProfile.avatar = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- ЛОГИКА СОРТИРОВКИ, ФИЛЬТРАЦИИ И ПОИСКА ЧАТОВ ---
+        function filterChats() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            renderChats(query);
+        }
+
+        // РЕНДЕР СПИСКА ЧАТОВ С ПОДДЕРЖКОЙ ГЛОБАЛЬНОГО ПОИСКА
+        function renderChats(searchQuery = "") {
+            const container = document.getElementById('chatsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+            const dict = translations[currentLang];
+            const query = searchQuery.toLowerCase().trim();
+
+            // 1. Фильтруем и сортируем активные чаты
+            const sortedChats = [...chats].sort((a, b) => {
+                const timeA = a.messages.length > 0 ? a.messages[a.messages.length - 1].timestamp : "";
+                const timeB = b.messages.length > 0 ? b.messages[b.messages.length - 1].timestamp : "";
+                return timeB.localeCompare(timeA);
+            });
+
+            sortedChats.forEach(chat => {
+                const localizedName = getLocalizedName(chat);
+                const phone = chat.phone ? chat.phone.toLowerCase() : "";
+                const username = chat.username ? chat.username.toLowerCase() : "";
+
+                // Проверяем совпадения в активных чатах, если введен поисковый запрос
+                if (query) {
+                    const matchesName = localizedName.toLowerCase().includes(query);
+                    const matchesPhone = phone.includes(query);
+                    const matchesUsername = username.includes(query);
+                    if (!matchesName && !matchesPhone && !matchesUsername) return;
+                }
+
+                const lastMsg = chat.messages.length > 0 ? chat.messages[chat.messages.length - 1] : null;
+                let msgText = "";
+                if (lastMsg) {
+                    if (lastMsg.type === 'image') msgText = "📷 " + (currentLang === 'ru' ? "Фотография" : (currentLang === 'az' ? "Şəkil" : "Photo"));
+                    else if (lastMsg.type === 'voice') msgText = "🎵 " + (currentLang === 'ru' ? "Голосовое сообщение" : (currentLang === 'az' ? "Səsli mesaj" : "Voice message"));
+                    else msgText = lastMsg.text;
+                }
+
+                const time = lastMsg ? lastMsg.timestamp : "";
+                const isActive = chat.id === activeChatId;
+
+                let isOnlineElement = '';
+                if (chat.status === 'в сети' && !chat.isGroup) {
+                    isOnlineElement = `<span class="w-2.5 h-2.5 rounded-full border-2 border-slate-900 status-online-dot absolute bottom-0 right-0 z-10"></span>`;
+                } else if (chat.status === 'был(а) недавно' && !chat.isGroup) {
+                    isOnlineElement = `<span class="w-2.5 h-2.5 rounded-full border-2 border-slate-900 status-offline-dot absolute bottom-0 right-0 z-10"></span>`;
+                }
+
+                const row = document.createElement('div');
+                row.className = `p-3.5 flex items-center space-x-3 cursor-pointer transition relative hover:bg-slate-800/40 select-none ${isActive ? 'bg-indigo-600/15 border-l-4 border-indigo-500 hover:bg-indigo-600/20' : ''}`;
+                row.onclick = () => selectChat(chat.id);
+
+                row.innerHTML = `
+                    <div class="relative flex-shrink-0" onclick="openProfileInfo(event, 'contact', '${chat.id}')">
+                        <img src="${chat.avatar}" class="w-11 h-11 rounded-full object-cover shadow-md hover:opacity-85 transition" alt="${localizedName}">
+                        ${isOnlineElement}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-0.5">
+                            <h3 class="font-bold text-slate-200 text-xs truncate max-w-[170px]">${localizedName}</h3>
+                            <span class="text-[10px] text-slate-500 font-mono flex-shrink-0">${time}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <p class="text-xs text-slate-400 truncate pr-2">${msgText}</p>
+                            ${chat.unread > 0 ? `<span class="bg-indigo-600 text-white font-bold text-[10px] h-4.5 min-w-4.5 px-1 rounded-full flex items-center justify-center animate-pulse flex-shrink-0">${chat.unread}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+
+            // 2. Рендерим глобальный поиск по зарегистрированным пользователям (если есть поисковый запрос)
+            if (query) {
+                const nonActiveUsers = registeredUsers.filter(u => {
+                    // Исключаем текущего пользователя
+                    if (currentUser && u.username === currentUser.username) return false;
+
+                    // Поиск по нику, отображаемому имени или номеру телефона
+                    const matchesUsername = u.username.toLowerCase().includes(query);
+                    const matchesDisplayName = u.displayName.toLowerCase().includes(query);
+                    const matchesPhone = u.phone ? u.phone.toLowerCase().includes(query) : false;
+                    if (!matchesUsername && !matchesDisplayName && !matchesPhone) return false;
+
+                    // Исключаем тех, у кого уже создан активный чат
+                    const inActive = chats.some(c => c.username === u.username || (!c.isGroup && c.name === u.displayName));
+                    return !inActive;
+                });
+
+                if (nonActiveUsers.length > 0) {
+                    // Заголовок разделителя результатов глобального поиска
+                    const header = document.createElement('div');
+                    header.className = 'p-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-950/40 border-t border-b border-slate-800/40 mt-2';
+                    header.innerText = dict.globalSearchHeader;
+                    container.appendChild(header);
+
+                    nonActiveUsers.forEach(u => {
+                        const row = document.createElement('div');
+                        row.className = `p-3.5 flex items-center space-x-3 cursor-pointer transition hover:bg-slate-800/40 select-none`;
+                        row.onclick = () => startPrivateChatWithRegisteredUser(u.username);
+
+                        row.innerHTML = `
+                            <div class="relative flex-shrink-0">
+                                <img src="${u.avatar || defaultBlankAvatar}" class="w-11 h-11 rounded-full object-cover shadow-md" alt="${u.displayName}">
+                                <span class="w-2.5 h-2.5 rounded-full border-2 border-slate-900 status-offline-dot absolute bottom-0 right-0 z-10"></span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-baseline mb-0.5">
+                                    <h3 class="font-bold text-slate-200 text-xs truncate max-w-[170px]">${u.displayName}</h3>
+                                    <span class="text-[9px] text-indigo-400 font-semibold uppercase tracking-wider">${dict.startChatBadge}</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400 truncate font-mono">@${u.username} ${u.phone ? '• ' + u.phone : ''}</p>
+                            </div>
+                        `;
+                        container.appendChild(row);
+                    });
+                }
+            }
+        }
+
+        // ОТКРЫТИЕ И СОЗДАНИЕ ЧАТА С ПОЛЬЗОВАТЕЛЕМ ИЗ ГЛОБАЛЬНОЙ БАЗЫ
+        function startPrivateChatWithRegisteredUser(username) {
+            const regUser = registeredUsers.find(u => u.username === username);
+            if (!regUser) return;
+
+            // На всякий случай проверяем, нет ли уже такого активного чата
+            let existingChat = chats.find(c => c.username === username || (c.isGroup === false && c.name === regUser.displayName));
+            if (existingChat) {
+                selectChat(existingChat.id);
+                document.getElementById('searchInput').value = '';
+                renderChats();
+                return;
+            }
+
+            // Создаем структуру нового чата
+            const newChat = {
+                id: 'chat_' + regUser.username + '_' + Date.now(),
+                username: regUser.username,
+                name: regUser.displayName,
+                avatar: regUser.avatar || defaultBlankAvatar,
+                status: "был(а) недавно",
+                bio: regUser.bio || "Пользователь GzafChat",
+                phone: regUser.phone || "",
+                messages: [],
+                unread: 0,
+                botReplies: [
+                    "Привет! Рад общению в GzafChat.",
+                    "Как дела? 😊",
+                    "Я сейчас немного занят, отвечу позже!",
+                    "Интересно! Расскажи подробнее."
+                ]
+            };
+
+            chats.unshift(newChat);
+            saveData();
+            selectChat(newChat.id);
+
+            // Очищаем инпут и обновляем отображение
+            document.getElementById('searchInput').value = '';
+            renderChats();
+        }
+
+        // Выбор активного диалога
+        function selectChat(id) {
+            activeChatId = id;
+            const chat = chats.find(c => c.id === id);
+            if (!chat) return;
+
+            chat.unread = 0;
+            saveData();
+
+            document.getElementById('noChatSelected').classList.add('hidden');
+            document.getElementById('activeChat').classList.remove('hidden');
+
+            const sidebar = document.getElementById('sidebar');
+            const chatArea = document.getElementById('chatArea');
+            sidebar.classList.add('hidden');
+            sidebar.classList.remove('w-full');
+            sidebar.classList.add('md:block');
+            chatArea.classList.remove('hidden');
+            chatArea.classList.add('flex');
+
+            const dict = translations[currentLang];
+            let localizedStatus = chat.status;
+            if (chat.status === "в сети") localizedStatus = dict.onlineStatus;
+            else if (chat.status === "был(а) недавно") localizedStatus = dict.offlineStatus;
+            else if (chat.status === "групповой чат") localizedStatus = dict.groupChatStatus;
+
+            document.getElementById('chatName').innerText = getLocalizedName(chat);
+            document.getElementById('chatAvatar').src = chat.avatar;
+            document.getElementById('chatStatus').innerText = localizedStatus;
+
+            renderChats();
+            renderMessages();
+            closeEmojiPanel();
+        }
+
+        function backToSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const chatArea = document.getElementById('chatArea');
+            sidebar.classList.remove('hidden');
+            sidebar.classList.add('w-full');
+            chatArea.classList.add('hidden');
+            chatArea.classList.remove('flex');
+            activeChatId = null;
+        }
+
+        // ---ОТРИСОВКА И КЛИЕНТСКИЙ МЕНЕДЖМЕНТ СООБЩЕНИЙ ---
+        function renderMessages() {
+            const container = document.getElementById('messagesContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const chat = chats.find(c => c.id === activeChatId);
+            if (!chat) return;
+
+            // Обработка исчезающих сообщений
+            let maxAge = 0;
+            if (disappearingMsgs === '24h') maxAge = 24 * 60 * 60 * 1000;
+            else if (disappearingMsgs === '7d') maxAge = 7 * 24 * 60 * 60 * 1000;
+            else if (disappearingMsgs === '90d') maxAge = 90 * 24 * 60 * 60 * 1000;
+
+            let filteredMessages = chat.messages;
+            if (maxAge > 0) {
+                filteredMessages = chat.messages.filter(msg => (Date.now() - msg.id) < maxAge);
+                if (filteredMessages.length !== chat.messages.length) {
+                    chat.messages = filteredMessages;
+                    saveData();
+                }
+            }
+
+            filteredMessages.forEach(msg => {
+                const isMe = msg.sender === 'me';
+                const isSystem = msg.sender === 'system';
+                const wrapper = document.createElement('div');
+                wrapper.className = isSystem ? "flex justify-center my-2" : `flex ${isMe ? 'justify-end' : 'justify-start'} items-end space-x-2 message-new-anim`;
+
+                if (isSystem) {
+                    wrapper.innerHTML = `
+                        <div class="bg-slate-900/60 border border-slate-800 text-slate-400 text-[10px] py-1 px-3 rounded-full font-medium shadow-sm uppercase tracking-wider text-center max-w-xs">
+                            ${msg.text}
+                        </div>
+                    `;
+                } else {
+                    let contentHtml = "";
+                    if (msg.type === 'image') {
+                        contentHtml = `<img src="${msg.text}" class="rounded-xl max-w-xs max-h-60 object-cover shadow-inner cursor-pointer hover:opacity-95 transition" onclick="window.open('${msg.text}', '_blank')">`;
+                    } else if (msg.type === 'voice') {
+                        contentHtml = `
+                            <div class="flex items-center space-x-3 py-1 px-2 min-w-[200px]">
+                                <button type="button" onclick="playVoiceMessageSimulation(this)" class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white flex items-center justify-center transition btn-anim flex-shrink-0">
+                                    <i data-lucide="play" class="w-4 h-4 ml-0.5"></i>
+                                </button>
+                                <div class="flex-1">
+                                    <div class="h-1 bg-slate-700 rounded-full overflow-hidden relative">
+                                        <div class="w-0 h-full bg-indigo-500 transition-all duration-300"></div>
+                                    </div>
+                                    <span class="text-[10px] text-slate-400 mt-1 block font-mono">${msg.text}</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        contentHtml = `<p class="whitespace-pre-wrap leading-relaxed text-xs break-words">${msg.text}</p>`;
+                    }
+
+                    const bubbleStyles = isMe 
+                        ? `background-color: ${userProfile.myBubbleColor || '#4f46e5'}; color: ${userProfile.myTextColor || '#ffffff'}; border-bottom-right-radius: 4px;`
+                        : `background-color: ${userProfile.theirBubbleColor || '#1e293b'}; color: ${userProfile.theirTextColor || '#f1f5f9'}; border-bottom-left-radius: 4px;`;
+
+                    wrapper.innerHTML = `
+                        ${!isMe ? `<img src="${chat.avatar}" class="w-7 h-7 rounded-full object-cover mb-1 border border-slate-800 shadow-sm flex-shrink-0">` : ''}
+                        <div style="${bubbleStyles}" class="max-w-xs md:max-w-md rounded-2xl py-2 px-3.5 shadow-md relative group">
+                            ${contentHtml}
+                            <div class="flex justify-end items-center space-x-1 mt-1 text-[9px] opacity-60 font-mono">
+                                <span>${msg.timestamp}</span>
+                                ${isMe ? `<i data-lucide="check-check" class="w-3 h-3 text-emerald-400"></i>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.appendChild(wrapper);
+            });
+
+            container.scrollTop = container.scrollHeight;
+            try {
+                lucide.createIcons();
+            } catch (e) {}
+        }
+
+        // Симуляция воспроизведения голосовой дорожки
+        function playVoiceMessageSimulation(btn) {
+            const icon = btn.querySelector('i');
+            const fillBar = btn.nextElementSibling.querySelector('.w-0');
+            
+            if (icon.getAttribute('data-lucide') === 'play') {
+                icon.setAttribute('data-lucide', 'square');
+                if (fillBar) {
+                    fillBar.style.width = '100%';
+                    fillBar.style.transition = 'width 6s linear';
+                }
+                
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(320, ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(440, ctx.currentTime + 3);
+                    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 5.8);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 5.9);
+                } catch(e){}
+
+                setTimeout(() => {
+                    icon.setAttribute('data-lucide', 'play');
+                    if (fillBar) {
+                        fillBar.style.transition = 'none';
+                        fillBar.style.width = '0%';
+                    }
+                    try { lucide.createIcons(); } catch(e){}
+                }, 6000);
+            } else {
+                icon.setAttribute('data-lucide', 'play');
+                if (fillBar) {
+                    fillBar.style.transition = 'none';
+                    fillBar.style.width = '0%';
+                }
+            }
+            try { lucide.createIcons(); } catch(e){}
+        }
+
+        // ---ОБРАБОТКА ОТПРАВКИ ТЕКСТА И ФАЙЛОВ ---
+        function handleSend(e) {
+            e.preventDefault();
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            sendMessage(text, 'text');
+            input.value = '';
+            closeEmojiPanel();
+        }
+
+        function sendMessage(content, type = 'text') {
+            const chat = chats.find(c => c.id === activeChatId);
+            if (!chat) return;
+
+            const newMsg = {
+                id: Date.now(),
+                text: content,
+                sender: 'me',
+                type: type,
+                timestamp: getCurrentTime()
+            };
+
+            chat.messages.push(newMsg);
+            saveData();
+            renderMessages();
+            renderChats();
+            playSentSound();
+
+            // Имитация ИИ-ответа бота с учетом симуляции задержки
+            const delay = typingDelayEnabled ? 2800 : 1800;
+            
+            if (typingDelayEnabled) {
+                setTimeout(() => {
+                    const statusTextEl = document.getElementById('chatStatus');
+                    if (statusTextEl && activeChatId === chat.id) {
+                        statusTextEl.innerText = currentLang === 'ru' ? 'печатает...' : (currentLang === 'az' ? 'yazır...' : 'typing...');
+                        statusTextEl.classList.add('text-indigo-400', 'font-semibold');
+                    }
+                }, 800);
+            }
+
+            setTimeout(() => {
+                const statusTextEl = document.getElementById('chatStatus');
+                if (statusTextEl && activeChatId === chat.id) {
+                    const dict = translations[currentLang];
+                    let localizedStatus = chat.status;
+                    if (chat.status === "в сети") localizedStatus = dict.onlineStatus;
+                    else if (chat.status === "был(а) недавно") localizedStatus = dict.offlineStatus;
+                    statusTextEl.innerText = localizedStatus;
+                    statusTextEl.classList.remove('text-indigo-400', 'font-semibold');
+                }
+                triggerBotReply(chat);
+            }, delay);
+        }
+
+        function triggerBotReply(chat) {
+            const randomReply = chat.botReplies[Math.floor(Math.random() * chat.botReplies.length)];
+            const botMsg = {
+                id: Date.now() + 1,
+                text: randomReply,
+                sender: 'them',
+                type: 'text',
+                timestamp: getCurrentTime()
+            };
+
+            chat.messages.push(botMsg);
+            
+            if (activeChatId !== chat.id) {
+                chat.unread++;
+            }
+
+            saveData();
+            playReceivedSound();
+
+            if (activeChatId === chat.id) {
+                renderMessages();
+            }
+            renderChats();
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                sendMessage(e.target.result, 'image');
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        // --- ИНТЕРАКТИВНЫЙ МИКРОФОН (ЗАПИСЬ ГОЛОСА С ТАЙМЕРОМ) ---
+        function toggleVoiceRecord() {
+            if (!isRecording) {
+                isRecording = true;
+                recordSeconds = 0;
+                document.getElementById('micIcon').classList.add('text-red-500', 'animate-pulse');
+                document.getElementById('micBtn').classList.add('bg-red-500/10');
+                const timerEl = document.getElementById('recordTimer');
+                timerEl.classList.remove('hidden');
+                timerEl.innerText = "0:00";
+
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    osc.frequency.setValueAtTime(440, ctx.currentTime);
+                    const gain = ctx.createGain();
+                    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.08);
+                } catch(e){}
+
+                recordInterval = setInterval(() => {
+                    recordSeconds++;
+                    const mins = Math.floor(recordSeconds / 60);
+                    const secs = recordSeconds % 60;
+                    timerEl.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+                }, 1000);
+            } else {
+                isRecording = false;
+                clearInterval(recordInterval);
+                document.getElementById('micIcon').classList.remove('text-red-500', 'animate-pulse');
+                document.getElementById('micBtn').classList.remove('bg-red-500/10');
+                document.getElementById('recordTimer').classList.add('hidden');
+
+                const finalDuration = document.getElementById('recordTimer').innerText;
+                sendMessage(`Голосовое сообщение (${finalDuration})`, 'voice');
+            }
+        }
+
+        // Смайлики
+        function toggleEmojiPanel() {
+            const panel = document.getElementById('emojiPanel');
+            panel.classList.toggle('hidden');
+        }
+
+        function closeEmojiPanel() {
+            const panel = document.getElementById('emojiPanel');
+            if (panel) panel.classList.add('hidden');
+        }
+
+        // Ввод смайлика
+        function insertEmoji(emoji) {
+            const input = document.getElementById('messageInput');
+            input.value += emoji;
+            input.focus();
+        }
+
+        // Сервисные хелперы
+        function getCurrentTime() {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            return `${hh}:${mm}`;
+        }
+
+        function saveData() {
+            localStorage.setItem('gzafchat_data', JSON.stringify(chats));
+        }
+
+        function resetApp() {
+            const dict = translations[currentLang];
+            if (confirm(dict.resetConfirm)) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        window.onload = init;
+    </script>
+
+</body>
+</html>

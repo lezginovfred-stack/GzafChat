@@ -1,0 +1,250 @@
+/* Обеспечиваем фиксацию высоты по динамическому вьюпорту, исключая обрезку панелей */
+html, body {
+    height: 100vh;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#messagesContainer {
+    transition: background-color 0.3s ease;
+}
+
+/* Кастомный скроллбар */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* АНИМАЦИЯ НАЖАТИЯ И НАВЕДЕНИЯ ДЛЯ КНОПОК */
+.btn-anim {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: scale(1);
+}
+.btn-anim:hover {
+    transform: scale(1.05);
+    filter: brightness(1.15);
+}
+.btn-anim:active {
+    transform: scale(0.95);
+    filter: brightness(0.95);
+}
+
+/* Анимация для новых сообщений */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+.message-new-anim {
+    animation: fadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ГЛАДКАЯ КРУГОВАЯ ПУЛЬСАЦИЯ */
+@keyframes statusRipple {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(2.4);
+        opacity: 0;
+    }
+}
+
+/* ЗЕЛЕНЫЙ ИНДИКАТОР ОНЛАЙН С АНИМАЦИЕЙ */
+.status-online-dot {
+    background-color: #10b981; /* emerald-500 */
+    position: relative;
+}
+.status-online-dot::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: inherit;
+    border-radius: inherit;
+    animation: statusRipple 1.6s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+/* КРАСНЫЙ ИНДИКАТОР ОФЛАЙН С АНИМАЦИЕЙ */
+.status-offline-dot {
+    background-color: #f43f5e; /* rose-500 */
+    position: relative;
+}
+.status-offline-dot::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background: inherit;
+    border-radius: inherit;
+    animation: statusRipple 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+/* КОМПАКТНЫЙ РЕЖИМ ПЕРЕПИСКИ */
+body.compact-mode .py-2.px-3\.5 {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+}
+body.compact-mode .message-new-anim {
+    margin-top: 0.35rem !important;
+    margin-bottom: 0.35rem !important;
+}
+body.compact-mode #messagesContainer > div {
+    margin-top: 0.35rem !important;
+    margin-bottom: 0.35rem !important;
+}
+
+/* СТИЛИ ДЛЯ СВЕТЛОЙ ТЕМЫ ОФОРМЛЕНИЯ */
+body.light-theme {
+    background-color: #f8fafc;
+    color: #0f172a;
+}
+body.light-theme #appMainContainer {
+    background-color: rgba(255, 255, 255, 0.85);
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+}
+body.light-theme aside {
+    border-color: #cbd5e1;
+    background-color: rgba(248, 250, 252, 0.5);
+}
+body.light-theme #activeChat {
+    background-color: #f8fafc;
+}
+body.light-theme #noChatSelected {
+    background-color: #f1f5f9;
+}
+body.light-theme .bg-slate-900\/50 {
+    background-color: rgba(241, 245, 249, 0.85);
+}
+body.light-theme .border-slate-800 {
+    border-color: #cbd5e1;
+}
+body.light-theme .bg-slate-950,
+body.light-theme .bg-slate-955 {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+}
+body.light-theme .text-slate-400 {
+    color: #475569;
+}
+body.light-theme .text-slate-200 {
+    color: #0f172a;
+}
+body.light-theme .text-slate-500 {
+    color: #64748b;
+}
+body.light-theme input {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+body.light-theme input::placeholder {
+    color: #94a3b8 !important;
+}
+body.light-theme .bg-slate-900 {
+    background-color: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+body.light-theme #groupMembersList {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+}
+body.light-theme #messagesContainer {
+    background-color: #f1f5f9 !important;
+}
+body.light-theme #settingsModal > div,
+body.light-theme #profileInfoModal > div,
+body.light-theme #groupModal > div,
+body.light-theme #customAlert > div,
+body.light-theme #phoneContactsModal > div {
+    background-color: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+body.light-theme .text-slate-300 {
+    color: #1e293b;
+}
+body.light-theme .bg-slate-950\/40,
+body.light-theme .bg-slate-955\/40 {
+    background-color: #f8fafc;
+}
+body.light-theme select {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+body.light-theme #tabContent-statuses,
+body.light-theme #tabContent-calls {
+    background-color: #f1f5f9;
+}
+body.light-theme #tabContent-statuses .bg-slate-950\/40,
+body.light-theme #tabContent-statuses .bg-slate-955\/40,
+body.light-theme #tabContent-calls .bg-slate-900\/40 {
+    background-color: #ffffff;
+    border-color: #cbd5e1;
+}
+
+/* ПЛАСТИКОВЫЙ СТИЛЬ FAB КНОПКИ (СИНИЙ С ГЛЯНЦЕМ) */
+.plastic-btn {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.45) 0%, rgba(79, 70, 229, 0.2) 100%);
+    box-shadow: 
+        0 10px 25px 0 rgba(0, 0, 0, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.3),
+        inset 0 -3px 8px rgba(0, 0, 0, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 50%;
+    transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.plastic-btn:hover {
+    transform: scale(1.08) translateY(-2px);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.65) 0%, rgba(79, 70, 229, 0.3) 100%);
+    box-shadow: 
+        0 14px 35px 0 rgba(99, 102, 241, 0.45),
+        inset 0 2px 6px rgba(255, 255, 255, 0.45),
+        inset 0 -4px 10px rgba(0, 0, 0, 0.45);
+}
+.plastic-btn:active {
+    transform: scale(0.95);
+    box-shadow: 
+        0 4px 10px 0 rgba(0, 0, 0, 0.5),
+        inset 0 1px 3px rgba(255, 255, 255, 0.2),
+        inset 0 -2px 5px rgba(0, 0, 0, 0.5);
+}
+
+body.light-theme .plastic-btn {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.5) 0%, rgba(79, 70, 229, 0.25) 100%);
+    box-shadow: 
+        0 8px 24px 0 rgba(99, 102, 241, 0.25),
+        inset 0 2px 4px rgba(255, 255, 255, 0.65),
+        inset 0 -3px 8px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(99, 102, 241, 0.15);
+}
